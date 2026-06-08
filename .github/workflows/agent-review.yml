@@ -1,0 +1,30 @@
+name: Autonomous Agent Review
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  repo-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run repository agent
+        run: node scripts/repo-agent.js
+
+      - name: Upload agent report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: study-planner-agent-review
+          path: agent-output/review.md

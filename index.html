@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Planner | Organizador academico</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">SP</div>
+          <div>
+            <strong>Study Planner</strong>
+            <span>Agenda academica</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Navegacion principal">
+          <a class="active" href="#dashboard">Panel</a>
+          <a href="#nueva-tarea">Nueva tarea</a>
+          <a href="#agenda">Agenda</a>
+          <a href="#asistente">Asistente</a>
+        </nav>
+
+        <div class="sidebar-note">
+          <span>Estado</span>
+          <strong id="storage-status">Modo local activo</strong>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar" id="dashboard">
+          <div>
+            <p class="eyebrow">Productividad academica asistida por IA</p>
+            <h1>Organiza entregas, parciales y horas de estudio sin perder prioridades</h1>
+          </div>
+          <button class="ghost-button" id="seed-data" type="button">Restaurar demo</button>
+        </header>
+
+        <section class="auth-panel" id="cuenta">
+          <div>
+            <p class="eyebrow">Cuenta y sincronizacion</p>
+            <h2 id="auth-title">Modo local</h2>
+            <p id="auth-copy">Inicia sesion para guardar tus tareas en PostgreSQL.</p>
+          </div>
+          <form class="auth-form" id="auth-form">
+            <input name="email" type="email" placeholder="tu-email@ejemplo.com" required />
+            <input name="password" type="password" placeholder="Minimo 6 caracteres" minlength="6" required />
+            <button type="submit" data-auth-action="login">Ingresar</button>
+            <button type="submit" class="ghost-button" data-auth-action="register">Crear cuenta</button>
+          </form>
+          <button class="ghost-button hidden" id="sign-out" type="button">Cerrar sesion</button>
+        </section>
+
+        <section class="metrics-grid" aria-label="Metricas principales">
+          <article>
+            <span>Tareas activas</span>
+            <strong id="metric-total">0</strong>
+          </article>
+          <article>
+            <span>Urgentes</span>
+            <strong id="metric-urgent">0</strong>
+          </article>
+          <article>
+            <span>Vencen esta semana</span>
+            <strong id="metric-week">0</strong>
+          </article>
+          <article>
+            <span>Horas pendientes</span>
+            <strong id="metric-hours">0 h</strong>
+          </article>
+        </section>
+
+        <section class="workspace">
+          <form class="panel" id="task-form">
+            <div class="section-heading" id="nueva-tarea">
+              <p class="eyebrow">Carga rapida</p>
+              <h2>Nueva tarea</h2>
+            </div>
+
+            <label>
+              Titulo
+              <input name="title" type="text" placeholder="Ej: TP Integrador de Gestion" required />
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Materia
+                <select name="subject" required>
+                  <option value="">Seleccionar</option>
+                  <option>Gestion de Desarrollo de Software</option>
+                  <option>Arquitectura de Software</option>
+                  <option>Base de Datos</option>
+                  <option>Programacion</option>
+                  <option>Ingles Tecnico</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <select name="type" required>
+                  <option value="">Seleccionar</option>
+                  <option>Trabajo practico</option>
+                  <option>Parcial</option>
+                  <option>Final</option>
+                  <option>Lectura</option>
+                  <option>Exposicion</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="two-columns">
+              <label>
+                Fecha limite
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                Horas estimadas
+                <input name="hours" type="number" min="1" max="80" value="2" required />
+              </label>
+            </div>
+
+            <label>
+              Descripcion
+              <textarea name="notes" rows="4" placeholder="Describe que hay que entregar, estudiar o preparar" required></textarea>
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Dificultad
+                <select name="difficulty" required>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
+              </label>
+              <label>
+                Estado
+                <select name="status" required>
+                  <option>Pendiente</option>
+                  <option>En progreso</option>
+                </select>
+              </label>
+            </div>
+
+            <button type="submit">Guardar tarea</button>
+          </form>
+
+          <section class="panel agenda-panel" id="agenda">
+            <div class="section-heading">
+              <p class="eyebrow">Plan de estudio</p>
+              <h2>Agenda</h2>
+            </div>
+
+            <div class="filters">
+              <input id="search" type="search" placeholder="Buscar tarea, materia o descripcion" />
+              <select id="difficulty-filter" aria-label="Filtrar por dificultad">
+                <option value="Todas">Todas</option>
+                <option>Alta</option>
+                <option>Media</option>
+                <option>Baja</option>
+              </select>
+            </div>
+
+            <div class="task-list" id="task-list" aria-live="polite"></div>
+          </section>
+        </section>
+
+        <section class="assistant-panel" id="asistente">
+          <div>
+            <p class="eyebrow">Asistente inteligente</p>
+            <h2>Recomendaciones de estudio</h2>
+          </div>
+          <div id="ai-recommendations" class="recommendation-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
