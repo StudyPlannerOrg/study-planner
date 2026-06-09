@@ -28,6 +28,10 @@ const chatbotToggle = document.querySelector("#chatbot-toggle");
 const chatbotPanel = document.querySelector("#chatbot-panel");
 const chatbotClose = document.querySelector("#chatbot-close");
 
+const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
+const SESSION_ACTIVITY_EVENTS = ["click", "keydown", "mousemove", "scroll", "touchstart"];
+
 let tasks = [];
 let token = localStorage.getItem(TOKEN_KEY);
 let currentUser = readJson(USER_KEY);
@@ -35,6 +39,7 @@ let apiAvailable = false;
 let authAction = "login";
 let activeView = "dashboard";
 let selectedTaskId = null;
+let sessionTimer = null;
 
 init();
 
@@ -146,6 +151,8 @@ authForm.addEventListener("submit", async (event) => {
   currentUser = response.user;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+  refreshSessionActivity();
+  startSessionTimer();
   authForm.reset();
   await loadCloudTasks();
   updateSessionUi();
@@ -154,13 +161,7 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 signOutButton.addEventListener("click", () => {
-  token = null;
-  currentUser = null;
-  tasks = [];
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  updateSessionUi();
-  showLanding();
+  closeSession();
 });
 
 search.addEventListener("input", render);
@@ -199,18 +200,23 @@ list.addEventListener("keydown", (event) => {
 async function init() {
   form.dueDate.value = todayOffset(1);
   form.hours.value = 2;
+  expireSessionIfNeeded();
   apiAvailable = await checkApiHealth();
 
   if (isCloudMode()) {
     await loadCloudTasks();
     if (isCloudMode()) {
+      refreshSessionActivity();
+      startSessionTimer();
       showApp();
       render();
     } else {
       loadLocalMode();
     }
-  } else {
+  } else if (!apiAvailable) {
     loadLocalMode();
+  } else {
+    showLanding();
   }
 
   updateSessionUi();
@@ -316,6 +322,54 @@ function loadLocalMode() {
   localStorage.removeItem(USER_KEY);
   showApp();
   render();
+}
+
+function closeSession(message = "") {
+  token = null;
+  currentUser = null;
+  tasks = [];
+  stopSessionTimer();
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
+  if (message) authCopy.textContent = message;
+  updateSessionUi();
+  showLanding();
+}
+
+function refreshSessionActivity() {
+  if (!token || !currentUser) return;
+  localStorage.setItem(SESSION_LAST_ACTIVITY_KEY, String(Date.now()));
+}
+
+function expireSessionIfNeeded() {
+  if (!token || !currentUser) return false;
+  const lastActivity = Number(localStorage.getItem(SESSION_LAST_ACTIVITY_KEY));
+  if (!lastActivity) {
+    refreshSessionActivity();
+    return false;
+  }
+  if (lastActivity && Date.now() - lastActivity <= SESSION_TIMEOUT_MS) return false;
+  closeSession("La sesion se cerro por inactividad. Volve a ingresar.");
+  return true;
+}
+
+function startSessionTimer() {
+  stopSessionTimer();
+  SESSION_ACTIVITY_EVENTS.forEach((eventName) => {
+    window.addEventListener(eventName, refreshSessionActivity, { passive: true });
+  });
+  sessionTimer = window.setInterval(() => {
+    if (expireSessionIfNeeded()) render();
+  }, 30 * 1000);
+}
+
+function stopSessionTimer() {
+  SESSION_ACTIVITY_EVENTS.forEach((eventName) => {
+    window.removeEventListener(eventName, refreshSessionActivity);
+  });
+  if (sessionTimer) window.clearInterval(sessionTimer);
+  sessionTimer = null;
 }
 
 function loadLocalTasks() {

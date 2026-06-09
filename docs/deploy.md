@@ -13,14 +13,14 @@ Esta guia usa:
 3. Verificar que esten incluidos:
 
 ```text
-server.js
+backend/server.js
 package.json
 db/schema.sql
-index.html
-app.js
-styles.css
+frontend/index.html
+frontend/app.js
+frontend/styles.css
 README.md
-INFORME.md
+docs/informe-tecnico.md
 render.yaml
 ```
 
@@ -81,7 +81,7 @@ Entregar:
 
 - URL publica de Render.
 - URL del repositorio GitHub.
-- Informe tecnico incluido en `INFORME.md`.
+- Informe tecnico incluido en `docs/informe-tecnico.md`.
 
 ## Alternativa local con Docker
 
@@ -94,7 +94,7 @@ docker compose up --build
 Luego abrir:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
 Docker crea:

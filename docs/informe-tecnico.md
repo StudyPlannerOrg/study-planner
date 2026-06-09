@@ -4,6 +4,8 @@
 
 Study Planner es una aplicacion full stack para organizar tareas academicas. El sistema permite registrar usuarios, iniciar sesion, guardar tareas en PostgreSQL, consultar una agenda, filtrar informacion y priorizar el estudio mediante un asistente inteligente basado en reglas explicables.
 
+La identidad visual usa un buho academico como mascota. El asistente virtual de la app se llama Hugo y aparece en la interfaz como guia de recomendaciones de estudio.
+
 ## Herramientas de IA utilizadas
 
 - Codex / ChatGPT: analisis de consigna, ideacion del proyecto, definicion del alcance, generacion del prototipo, revision de documentacion y armado de checklist.
