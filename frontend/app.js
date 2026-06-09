@@ -1,8 +1,41 @@
+import { apiRequest as requestApiRaw, checkApiHealth } from "./js/api.js";
+import { buildHugoReply, renderRecommendations as renderChatbotRecommendations } from "./js/chatbot.js";
+import {
+  addChecklistRow,
+  handleChecklistDragEnd,
+  handleChecklistDragOver,
+  handleChecklistDragStart,
+  handleChecklistDrop,
+  readChecklist,
+  renderChecklistEditor,
+  updateChecklistProgress,
+} from "./js/checklist.js";
 import { STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
 import { demoTasks } from "./js/demoTasks.js";
 import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
 import { escapeHtml, readJson } from "./js/helpers.js";
-import { calculatePriorityScore, explainPriority } from "./js/priority.js";
+import {
+  buildNotifications,
+  renderNotifications as renderNotificationList,
+  requestBrowserNotifications as requestNativeNotifications,
+} from "./js/notifications.js";
+import { calculatePriorityScore } from "./js/priority.js";
+import { loadLocalTasks as loadStoredTasks, persistLocalTasks } from "./js/storage.js";
+import {
+  collectTaskForm,
+  formatDateTime,
+  formatProgress,
+  formatTaskSubtitle,
+  getChecklistProgress,
+  getNextStatus,
+  getPriorityClass,
+  getTaskStateClass,
+  matchesMetricFilter,
+  normalizeTaskDates,
+  renderChecklistPreview,
+  sortForView,
+  sortTasks,
+} from "./js/taskUtils.js";
 
 const landingPage = document.querySelector("#landing-page");
 const authPage = document.querySelector("#auth-page");
@@ -128,10 +161,10 @@ document.querySelectorAll("[data-chat-prompt]").forEach((button) => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const task = collectTaskForm(form, taskChecklist);
+  const task = collectTaskForm(form, taskChecklist, readChecklist);
 
   if (isCloudMode()) {
-    const created = await apiRequest("/api/tasks", {
+    const created = await requestApi("/api/tasks", {
       method: "POST",
       body: JSON.stringify(task),
     });
@@ -152,7 +185,7 @@ editTaskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selectedTaskId) return;
 
-  const changes = collectTaskForm(editTaskForm, editChecklist);
+  const changes = collectTaskForm(editTaskForm, editChecklist, readChecklist);
   const currentTask = tasks.find((task) => task.id === selectedTaskId);
 
   if (currentTask && changes.status !== currentTask.status) {
@@ -173,7 +206,7 @@ authForm.addEventListener("submit", async (event) => {
   }
 
   const data = new FormData(authForm);
-  const response = await apiRequest(`/api/auth/${authAction}`, {
+  const response = await requestApi(`/api/auth/${authAction}`, {
     method: "POST",
     body: JSON.stringify({
       email: data.get("email").trim(),
@@ -236,7 +269,7 @@ calendarNext.addEventListener("click", () => {
 document.querySelectorAll("[data-checklist-add]").forEach((button) => {
   button.addEventListener("click", () => {
     const target = button.dataset.checklistAdd === "edit" ? editChecklist : taskChecklist;
-    addChecklistRow(target);
+    addChecklistRow(target, {}, { withDoneToggle: target === editChecklist });
     updateEditChecklistProgress();
   });
 });
@@ -372,16 +405,6 @@ async function init() {
   updateSessionUi();
 }
 
-async function checkApiHealth() {
-  try {
-    const response = await fetch("/api/health");
-    const data = await response.json();
-    return Boolean(data.ok && data.database);
-  } catch {
-    return false;
-  }
-}
-
 function showLanding() {
   landingPage.classList.remove("hidden");
   authPage.classList.add("hidden");
@@ -419,7 +442,7 @@ function openTaskDetail(id) {
   editTaskForm.notes.value = task.notes || "";
   editTaskForm.difficulty.value = task.difficulty;
   editTaskForm.status.value = task.status;
-  renderChecklistEditor(editChecklist, task.checklist || []);
+  renderChecklistEditor(editChecklist, task.checklist || [], { withDoneToggle: true });
   updateEditChecklistProgress();
   setView("detail");
 }
@@ -524,103 +547,15 @@ function stopSessionTimer() {
 }
 
 function loadLocalTasks() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return sortTasks([...demoTasks]);
-
-  try {
-    return sortTasks(JSON.parse(saved));
-  } catch {
-    return sortTasks([...demoTasks]);
-  }
+  return loadStoredTasks(STORAGE_KEY, demoTasks, sortTasks);
 }
 
 function persistLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-}
-
-function collectTaskForm(formElement, checklistElement) {
-  const data = new FormData(formElement);
-  const hours = Number(data.get("hours"));
-
-  return {
-    title: data.get("title").trim(),
-    subject: "",
-    type: data.get("type"),
-    dueDate: data.get("dueDate"),
-    dueTime: data.get("dueTime"),
-    hours: hours > 0 ? hours : null,
-    notes: String(data.get("notes") || "").trim(),
-    checklist: readChecklist(checklistElement),
-    difficulty: data.get("difficulty"),
-    status: data.get("status"),
-  };
-}
-
-function addChecklistRow(container, item = {}) {
-  const isEdit = container === editChecklist;
-  const row = document.createElement("div");
-  row.className = "checklist-row";
-  row.draggable = true;
-  row.dataset.itemId = item.id || crypto.randomUUID();
-  row.innerHTML = `
-    ${
-      isEdit
-        ? `<label class="checklist-toggle">
-            <input type="checkbox" ${item.done ? "checked" : ""} />
-            <span></span>
-          </label>`
-        : `<span class="drag-handle" aria-hidden="true">☰</span>`
-    }
-    <input type="text" value="${escapeHtml(item.text || "")}" placeholder="Ej: leer consigna, resolver ejercicios, revisar entrega" />
-    <button class="icon-button" type="button" data-checklist-remove aria-label="Quitar subtarea">x</button>
-  `;
-  container.appendChild(row);
-}
-
-function renderChecklistEditor(container, checklist) {
-  container.innerHTML = "";
-  checklist.forEach((item) => addChecklistRow(container, item));
-}
-
-function readChecklist(container) {
-  return [...container.querySelectorAll(".checklist-row")]
-    .map((row) => ({
-      id: row.dataset.itemId || crypto.randomUUID(),
-      text: row.querySelector('input[type="text"]').value.trim(),
-      done: Boolean(row.querySelector('input[type="checkbox"]')?.checked),
-    }))
-    .filter((item) => item.text);
+  persistLocalTasks(STORAGE_KEY, tasks);
 }
 
 function updateEditChecklistProgress() {
-  const checklist = readChecklist(editChecklist);
-  const done = checklist.filter((item) => item.done).length;
-  editChecklistProgress.textContent = `${done}/${checklist.length}`;
-}
-
-function handleChecklistDragStart(event) {
-  const row = event.target.closest(".checklist-row");
-  if (!row) return;
-  event.dataTransfer.setData("text/plain", row.dataset.itemId);
-  row.classList.add("dragging");
-}
-
-function handleChecklistDragOver(event) {
-  event.preventDefault();
-  const row = event.target.closest(".checklist-row");
-  const dragging = event.currentTarget.querySelector(".dragging");
-  if (!row || !dragging || row === dragging) return;
-  const before = event.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2;
-  event.currentTarget.insertBefore(dragging, before ? row : row.nextSibling);
-}
-
-function handleChecklistDrop(event) {
-  event.preventDefault();
-  handleChecklistDragEnd(event);
-}
-
-function handleChecklistDragEnd(event) {
-  event.currentTarget.querySelector(".dragging")?.classList.remove("dragging");
+  updateChecklistProgress(editChecklist, editChecklistProgress);
 }
 
 function openDayModal(date) {
@@ -680,103 +615,16 @@ function closeDayModal() {
   dayModal.classList.add("hidden");
 }
 
-function buildNotifications() {
-  const active = tasks.filter((task) => task.status !== "Terminada");
-  const overdue = active.filter((task) => daysUntil(task.dueDate) < 0);
-  const today = active.filter((task) => daysUntil(task.dueDate) === 0);
-  const tomorrow = active.filter((task) => daysUntil(task.dueDate) === 1);
-  const urgent = active.filter((task) => calculatePriorityScore(task) >= 75 && daysUntil(task.dueDate) > 1);
-  const incompleteSteps = active.filter((task) => {
-    const progress = getChecklistProgress(task);
-    return progress.total && progress.percent < 100 && daysUntil(task.dueDate) <= 2;
-  });
-
-  return [
-    ...overdue.map((task) => ({
-      id: `overdue-${task.id}`,
-      tone: "danger",
-      title: `Vencio: ${task.title}`,
-      body: `${formatDate(task.dueDate)} - ${task.status}`,
-      taskId: task.id,
-    })),
-    ...today.map((task) => ({
-      id: `today-${task.id}`,
-      tone: "warning",
-      title: `Vence hoy: ${task.title}`,
-      body: `${task.type} - ${task.difficulty}`,
-      taskId: task.id,
-    })),
-    ...tomorrow.map((task) => ({
-      id: `tomorrow-${task.id}`,
-      tone: "info",
-      title: `Vence mañana: ${task.title}`,
-      body: `${task.type} - ${task.status}`,
-      taskId: task.id,
-    })),
-    ...urgent.slice(0, 3).map((task) => ({
-      id: `urgent-${task.id}`,
-      tone: "warning",
-      title: `Prioridad alta: ${task.title}`,
-      body: `${formatDate(task.dueDate)} - ${explainPriority(task)}`,
-      taskId: task.id,
-    })),
-    ...incompleteSteps.slice(0, 3).map((task) => {
-      const progress = getChecklistProgress(task);
-      return {
-        id: `steps-${task.id}`,
-        tone: "info",
-        title: `Subtareas pendientes: ${task.title}`,
-        body: `${progress.done}/${progress.total} pasos completos`,
-        taskId: task.id,
-      };
-    }),
-  ];
+function getCurrentNotifications() {
+  return buildNotifications(tasks, getChecklistProgress);
 }
 
 function renderNotifications() {
-  const notifications = buildNotifications();
-  notificationCount.textContent = String(notifications.length);
-  notificationCount.classList.toggle("empty", !notifications.length);
-
-  notificationList.innerHTML = notifications.length
-    ? notifications
-        .map(
-          (item) => `
-            <button class="notification-item ${item.tone}" type="button" data-notification-task="${item.taskId}">
-              <strong>${escapeHtml(item.title)}</strong>
-              <span>${escapeHtml(item.body)}</span>
-            </button>
-          `
-        )
-        .join("")
-    : `<div class="empty-state compact-empty">No hay avisos importantes por ahora.</div>`;
+  renderNotificationList({ count: notificationCount, list: notificationList }, getCurrentNotifications());
 }
 
 async function requestBrowserNotifications() {
-  if (!("Notification" in window)) {
-    browserNotifications.textContent = "No disponible";
-    return;
-  }
-
-  const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-  if (permission !== "granted") {
-    browserNotifications.textContent = "Permiso denegado";
-    return;
-  }
-
-  const sent = readJson(BROWSER_NOTIFICATION_KEY) || {};
-  const todayKey = normalizeDateValue(new Date());
-  const notifications = buildNotifications().filter((item) => item.tone !== "info").slice(0, 4);
-
-  notifications.forEach((item) => {
-    const sentKey = `${todayKey}-${item.id}`;
-    if (sent[sentKey]) return;
-    new Notification("Study Planner", { body: `${item.title}. ${item.body}` });
-    sent[sentKey] = true;
-  });
-
-  localStorage.setItem(BROWSER_NOTIFICATION_KEY, JSON.stringify(sent));
-  browserNotifications.textContent = notifications.length ? "Alertas activas" : "Sin alertas";
+  await requestNativeNotifications(browserNotifications, getCurrentNotifications(), BROWSER_NOTIFICATION_KEY);
 }
 
 function sendHugoMessage(text) {
@@ -784,53 +632,14 @@ function sendHugoMessage(text) {
   if (!message) return;
 
   chatMessages.push({ from: "user", text: message });
-  chatMessages.push({ from: "bot", text: buildHugoReply(message) });
+  chatMessages.push({ from: "bot", text: buildHugoReply(message, tasks, { formatProgress, sortTasks }) });
   chatMessages = chatMessages.slice(-10);
   chatbotInput.value = "";
   renderRecommendations();
 }
 
-function buildHugoReply(message) {
-  const normalized = message.toLowerCase();
-  const active = sortTasks(tasks.filter((task) => task.status !== "Terminada"));
-  const completed = tasks.filter((task) => task.status === "Terminada");
-  const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
-  const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
-
-  if (!tasks.length) return "Todavia no hay tareas cargadas. Crea una actividad y te ayudo a priorizarla.";
-
-  if (normalized.includes("hola") || normalized.includes("buen")) {
-    return `Hola. Tenes ${active.length} tareas activas y ${completed.length} terminadas. Puedo ayudarte con prioridades, vencimientos o progreso.`;
-  }
-
-  if (normalized.includes("primero") || normalized.includes("prioridad") || normalized.includes("urgente")) {
-    if (!active.length) return "No tenes tareas activas. Lo que aparece terminado queda tachado y al fondo.";
-    const task = active[0];
-    return `Yo empezaria por "${task.title}". Vence el ${formatDate(task.dueDate)}, dificultad ${task.difficulty}, progreso ${formatProgress(task)}. ${explainPriority(task)}`;
-  }
-
-  if (normalized.includes("semana") || normalized.includes("vence") || normalized.includes("fecha")) {
-    if (!week.length) return "No veo tareas activas que venzan esta semana.";
-    return `Esta semana tenes: ${week.slice(0, 4).map((task) => `"${task.title}" (${formatDate(task.dueDate)})`).join(", ")}.`;
-  }
-
-  if (normalized.includes("progreso") || normalized.includes("voy") || normalized.includes("avance")) {
-    const total = tasks.length;
-    const percent = total ? Math.round((completed.length / total) * 100) : 0;
-    return `Vas con ${completed.length}/${total} tareas terminadas (${percent}%). Pendientes: ${active.length}.`;
-  }
-
-  if (normalized.includes("plan") || normalized.includes("organiza") || normalized.includes("estudi")) {
-    if (!active.length) return "Tu agenda activa esta libre. Podrias revisar tareas terminadas o cargar la proxima entrega.";
-    return `Plan corto: 1) trabaja en "${active[0].title}", 2) revisa subtareas incompletas, 3) deja preparada la siguiente entrega: ${active[1] ? `"${active[1].title}"` : "no hay otra tarea activa"}.`;
-  }
-
-  if (urgent.length) return `Detecte ${urgent.length} tarea(s) urgente(s). La primera es "${urgent[0].title}", con entrega ${formatDate(urgent[0].dueDate)}.`;
-  return "Puedo responder sobre que hacer primero, que vence esta semana, como vas de progreso o ayudarte a armar un plan.";
-}
-
 async function loadCloudTasks() {
-  const data = await apiRequest("/api/tasks");
+  const data = await requestApi("/api/tasks");
   if (data) tasks = sortTasks(data.map(normalizeTaskDates));
 }
 
@@ -852,7 +661,7 @@ async function toggleChecklistItem(taskId, itemId, done) {
 
 async function updateTask(id, changes) {
   if (isCloudMode()) {
-    const updated = await apiRequest(`/api/tasks/${id}`, {
+    const updated = await requestApi(`/api/tasks/${id}`, {
       method: "PATCH",
       body: JSON.stringify(changes),
     });
@@ -866,7 +675,7 @@ async function updateTask(id, changes) {
 
 async function deleteTask(id) {
   if (isCloudMode()) {
-    const deleted = await apiRequest(`/api/tasks/${id}`, { method: "DELETE" });
+    const deleted = await requestApi(`/api/tasks/${id}`, { method: "DELETE" });
     if (deleted !== null) tasks = tasks.filter((task) => task.id !== id);
     return;
   }
@@ -875,31 +684,15 @@ async function deleteTask(id) {
   persistLocal();
 }
 
-async function apiRequest(path, options = {}) {
-  try {
-    const response = await fetch(path, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers || {}),
-      },
-    });
 
-    if (response.status === 204) return {};
-
-    const data = await response.json();
-    if (!response.ok) {
-      authCopy.textContent = data.message || "Ocurrio un error en la API.";
-      if (response.status === 401) signOutButton.click();
-      return null;
-    }
-
-    return data;
-  } catch {
-    authCopy.textContent = "No se pudo conectar con el backend.";
-    return null;
-  }
+function requestApi(path, options = {}) {
+  return requestApiRaw(path, options, {
+    token,
+    onError: (message) => {
+      authCopy.textContent = message;
+    },
+    onAuthError: () => signOutButton.click(),
+  });
 }
 
 function render() {
@@ -919,10 +712,10 @@ function getFilteredTasks() {
     const matchesDifficulty = difficulty === "Todas" || task.difficulty === difficulty;
     const checklistText = (task.checklist || []).map((item) => item.text).join(" ");
     const text = `${task.title} ${task.type} ${task.notes || ""} ${checklistText}`.toLowerCase();
-    return matchesDifficulty && matchesMetricFilter(task) && text.includes(query);
+    return matchesDifficulty && matchesMetricFilter(task, metricFilter) && text.includes(query);
   });
 
-  return sortForView(filtered);
+  return sortForView(filtered, sortFilter.value);
 }
 
 function renderMetrics() {
@@ -1062,166 +855,5 @@ function renderTasks(items) {
 }
 
 function renderRecommendations() {
-  if (chatMessages.length) {
-    recommendations.innerHTML = chatMessages
-      .map(
-        (message) => `
-          <div class="chat-message ${message.from}">
-            <span>${escapeHtml(message.text)}</span>
-          </div>
-        `
-      )
-      .join("");
-    recommendations.scrollTop = recommendations.scrollHeight;
-    return;
-  }
-
-  const active = tasks.filter((task) => task.status !== "Terminada");
-  const ranked = active
-    .map((task) => ({
-      task,
-      score: calculatePriorityScore(task),
-      reason: explainPriority(task),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  if (!ranked.length) {
-    recommendations.innerHTML = `<div class="chat-message bot"><span>Soy Hugo. Crea una tarea y te ayudo a priorizarla.</span></div>`;
-    return;
-  }
-
-  recommendations.innerHTML = ranked
-    .map(
-      ({ task, reason }) => `
-        <div class="chat-message bot">
-          <strong>${escapeHtml(task.title)}</strong>
-          <span>${reason}</span>
-          <small>Progreso: ${formatProgress(task)}</small>
-        </div>
-      `
-    )
-    .join("");
-}
-
-function sortTasks(items) {
-  return items.map(normalizeTaskDates).sort((a, b) => {
-    const byDone = compareCompleted(a, b);
-    if (byDone !== 0) return byDone;
-    const byScore = calculatePriorityScore(b) - calculatePriorityScore(a);
-    if (byScore !== 0) return byScore;
-    return normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate));
-  });
-}
-
-function normalizeTaskDates(task) {
-  return {
-    ...task,
-    dueDate: normalizeDateValue(task.dueDate),
-    dueTime: task.dueTime || "",
-    hours: Number(task.hours) > 0 ? Number(task.hours) : null,
-    subject: task.subject || "",
-    notes: task.notes || "",
-    checklist: Array.isArray(task.checklist) ? task.checklist : [],
-  };
-}
-
-function sortForView(items) {
-  const sorted = [...items];
-  const difficultyOrder = { Alta: 0, Media: 1, Baja: 2 };
-
-  if (sortFilter.value === "dueDate") {
-    return sorted.sort((a, b) => compareCompleted(a, b) || normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate)));
-  }
-
-  if (sortFilter.value === "difficulty") {
-    return sorted.sort((a, b) => compareCompleted(a, b) || difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty] || calculatePriorityScore(b) - calculatePriorityScore(a));
-  }
-
-  if (sortFilter.value === "progress") {
-    return sorted.sort((a, b) => compareCompleted(a, b) || getChecklistProgress(b).percent - getChecklistProgress(a).percent || calculatePriorityScore(b) - calculatePriorityScore(a));
-  }
-
-  return sortTasks(sorted);
-}
-
-function formatTaskSubtitle(task) {
-  return [formatDateTime(task), task.type].filter(Boolean).map(escapeHtml).join(" - ");
-}
-
-function formatDateTime(task) {
-  return `${formatDate(task.dueDate)}${task.dueTime ? ` ${task.dueTime}` : ""}`;
-}
-
-function getPriorityClass(task) {
-  const score = calculatePriorityScore(task);
-  if (score >= 75) return "Urgente";
-  if (score >= 45) return "Alta";
-  return "Normal";
-}
-
-function getTaskStateClass(task) {
-  return task.status === "Terminada" ? "is-completed" : "";
-}
-
-function getNextStatus(status) {
-  if (status === "Pendiente") return "En progreso";
-  if (status === "En progreso") return "Terminada";
-  return "Pendiente";
-}
-
-function compareCompleted(a, b) {
-  return Number(a.status === "Terminada") - Number(b.status === "Terminada");
-}
-
-function formatProgress(task) {
-  const progress = getChecklistProgress(task);
-  if (progress.total) return `${progress.percent}%`;
-  if (task.status === "Terminada") return "100%";
-  if (task.status === "En progreso") return "50%";
-  return "0%";
-}
-
-function matchesMetricFilter(task) {
-  if (metricFilter === "active") return task.status !== "Terminada";
-  if (metricFilter === "urgent") return task.status !== "Terminada" && calculatePriorityScore(task) >= 75;
-  if (metricFilter === "week") return task.status !== "Terminada" && daysUntil(task.dueDate) <= 7;
-  if (metricFilter === "pending") return task.status === "Pendiente";
-  return true;
-}
-
-function getChecklistProgress(task) {
-  const checklist = task.checklist || [];
-  const done = checklist.filter((item) => item.done).length;
-  return {
-    done,
-    total: checklist.length,
-    percent: checklist.length ? Math.round((done / checklist.length) * 100) : 0,
-  };
-}
-
-function renderChecklistPreview(task) {
-  const checklist = task.checklist || [];
-  if (!checklist.length) return "";
-
-  const progress = getChecklistProgress(task);
-  return `
-    <div class="checklist-preview">
-      <div class="checklist-progress">
-        <span>Pasos ${progress.done}/${progress.total}</span>
-        <b style="width: ${progress.percent}%"></b>
-      </div>
-      ${checklist
-        .slice(0, 4)
-        .map(
-          (item) => `
-            <label class="task-check">
-              <input type="checkbox" data-action="toggle-check" data-id="${task.id}" data-item-id="${item.id}" ${item.done ? "checked" : ""} />
-              <span>${escapeHtml(item.text)}</span>
-            </label>
-          `
-        )
-        .join("")}
-    </div>
-  `;
+  renderChatbotRecommendations(recommendations, tasks, chatMessages, { formatProgress });
 }
