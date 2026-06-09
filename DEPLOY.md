@@ -94,7 +94,7 @@ docker compose up --build
 Luego abrir:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
 Docker crea:

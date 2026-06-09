@@ -73,10 +73,10 @@ docker compose up --build
 Luego abrir:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
-Este modo crea un contenedor para la app y otro para PostgreSQL.
+Este modo crea un contenedor para la app y otro para PostgreSQL. El puerto externo es `3001` para evitar conflictos con otros servicios locales.
 
 ## Base de datos
 
