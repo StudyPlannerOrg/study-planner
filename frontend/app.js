@@ -1,42 +1,8 @@
-const STORAGE_KEY = "studyplanner.tasks";
-const TOKEN_KEY = "studyplanner.token";
-const USER_KEY = "studyplanner.user";
-
-const demoTasks = [
-  {
-    id: crypto.randomUUID(),
-    title: "TP Integrador con IA",
-    subject: "Gestion de Desarrollo de Software",
-    type: "Trabajo practico",
-    dueDate: todayOffset(2),
-    hours: 8,
-    notes: "Completar aplicacion web, README, informe tecnico y despliegue online.",
-    difficulty: "Alta",
-    status: "En progreso",
-  },
-  {
-    id: crypto.randomUUID(),
-    title: "Resumen de patrones",
-    subject: "Arquitectura de Software",
-    type: "Lectura",
-    dueDate: todayOffset(5),
-    hours: 3,
-    notes: "Preparar resumen de patrones MVC, capas y repositorio para la clase.",
-    difficulty: "Media",
-    status: "Pendiente",
-  },
-  {
-    id: crypto.randomUUID(),
-    title: "Parcial SQL",
-    subject: "Base de Datos",
-    type: "Parcial",
-    dueDate: todayOffset(1),
-    hours: 6,
-    notes: "Practicar joins, subconsultas, normalizacion y consultas agrupadas.",
-    difficulty: "Alta",
-    status: "Pendiente",
-  },
-];
+import { STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
+import { demoTasks } from "./js/demoTasks.js";
+import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
+import { escapeHtml, readJson } from "./js/helpers.js";
+import { calculatePriorityScore, explainPriority } from "./js/priority.js";
 
 const landingPage = document.querySelector("#landing-page");
 const authPage = document.querySelector("#auth-page");
@@ -241,10 +207,10 @@ async function init() {
       showApp();
       render();
     } else {
-      showLanding();
+      loadLocalMode();
     }
   } else {
-    showLanding();
+    loadLocalMode();
   }
 
   updateSessionUi();
@@ -325,8 +291,8 @@ function setView(view) {
 
 function updateSessionUi() {
   if (!apiAvailable) {
-    authCopy.textContent = "El backend no esta disponible. Revisa el deploy o intenta nuevamente.";
-    storageStatus.textContent = "Sin conexion";
+    authCopy.textContent = "El backend no esta disponible. Podes usar el modo local en este dispositivo.";
+    storageStatus.textContent = "Modo local activo";
     return;
   }
 
@@ -340,6 +306,16 @@ function updateSessionUi() {
 
 function isCloudMode() {
   return Boolean(apiAvailable && token && currentUser);
+}
+
+function loadLocalMode() {
+  tasks = loadLocalTasks();
+  currentUser = null;
+  token = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  showApp();
+  render();
 }
 
 function loadLocalTasks() {
@@ -518,7 +494,7 @@ function renderRecommendations() {
     .slice(0, 3);
 
   if (!ranked.length) {
-    recommendations.innerHTML = `<div class="chat-message bot">Crea una tarea y te ayudo a priorizarla.</div>`;
+    recommendations.innerHTML = `<div class="chat-message bot">Soy Hugo. Crea una tarea y te ayudo a priorizarla.</div>`;
     return;
   }
 
@@ -534,44 +510,6 @@ function renderRecommendations() {
     .join("");
 }
 
-function calculatePriorityScore(task) {
-  const days = daysUntil(task.dueDate);
-  const difficultyPoints = { Alta: 30, Media: 18, Baja: 8 };
-  const typePoints = {
-    Final: 30,
-    Parcial: 26,
-    "Trabajo practico": 20,
-    Exposicion: 18,
-    Lectura: 8,
-  };
-
-  let score = difficultyPoints[task.difficulty] + typePoints[task.type] + Number(task.hours) * 3;
-
-  if (days < 0) score += 40;
-  else if (days <= 1) score += 35;
-  else if (days <= 3) score += 25;
-  else if (days <= 7) score += 12;
-
-  if (task.status === "En progreso") score -= 8;
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-
-function explainPriority(task) {
-  const days = daysUntil(task.dueDate);
-  const score = calculatePriorityScore(task);
-  const dueText = days < 0 ? "ya esta vencida" : days === 0 ? "vence hoy" : `vence en ${days} dia(s)`;
-
-  if (score >= 75) {
-    return `Prioridad maxima: ${dueText}, dificultad ${task.difficulty.toLowerCase()} y ${task.hours} hora(s) estimadas.`;
-  }
-
-  if (score >= 45) {
-    return `Conviene reservar tiempo esta semana: ${dueText} y demanda ${task.hours} hora(s).`;
-  }
-
-  return `Puede planificarse despues de las tareas criticas: ${dueText}.`;
-}
-
 function sortTasks(items) {
   return items.map(normalizeTaskDates).sort((a, b) => {
     const byScore = calculatePriorityScore(b) - calculatePriorityScore(a);
@@ -585,49 +523,4 @@ function normalizeTaskDates(task) {
     ...task,
     dueDate: normalizeDateValue(task.dueDate),
   };
-}
-
-function normalizeDateValue(value) {
-  if (!value) return todayOffset(0);
-  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return todayOffset(0);
-  return date.toISOString().slice(0, 10);
-}
-
-function daysUntil(value) {
-  const today = new Date(todayOffset(0));
-  const due = new Date(normalizeDateValue(value));
-  const diff = due.getTime() - today.getTime();
-  return Math.ceil(diff / 86400000);
-}
-
-function todayOffset(offset) {
-  const date = new Date();
-  date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
-}
-
-function formatDate(value) {
-  const normalized = normalizeDateValue(value);
-  const [year, month, day] = normalized.split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function readJson(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key));
-  } catch {
-    return null;
-  }
 }

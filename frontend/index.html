@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Study Planner | Organizador academico</title>
+    <link rel="icon" type="image/png" href="assets/hugo-mascot.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <section class="public-page" id="landing-page">
       <header class="public-nav">
         <button class="brand brand-button" type="button" data-go-home>
-          <span class="brand-mark">SP</span>
+          <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
           <span>
             <strong>Study Planner</strong>
-            <small>Productividad academica</small>
+            <small>Planner inteligente para estudiantes</small>
           </span>
         </button>
         <nav class="public-links" aria-label="Navegacion publica">
@@ -75,55 +76,93 @@
                 </article>
               </div>
               <div class="assistant-teaser">
-                <b>Asistente</b>
-                <p>Prioriza el TP con IA: vence pronto y tiene mayor carga horaria.</p>
+                <b>Hugo</b>
+                <p>Tu asistente virtual prioriza el TP con IA: vence pronto y tiene mayor carga horaria.</p>
               </div>
             </div>
           </div>
         </section>
 
-        <section class="feature-strip" id="funciones">
-          <article>
-            <span>01</span>
-            <h2>Agenda visual</h2>
-            <p>Materias, entregas y parciales ordenados por impacto real.</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h2>Prioridad automatica</h2>
-            <p>Calcula urgencia por fecha limite, dificultad, tipo y horas estimadas.</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h2>Progreso guardado</h2>
-            <p>Tu agenda queda disponible cuando vuelvas a entrar, sin perder avances.</p>
-          </article>
+        <section class="landing-section feature-section" id="funciones">
+          <div class="landing-section-heading">
+            <p class="eyebrow">Funciones</p>
+            <h2>Todo lo que necesitas para decidir que estudiar primero</h2>
+            <p>Study Planner transforma pendientes sueltos en una agenda clara, priorizada y lista para usar cada dia.</p>
+          </div>
+
+          <div class="feature-strip">
+            <article>
+              <span>01</span>
+              <h3>Prioridad visible</h3>
+              <p>Ordena tareas por vencimiento, dificultad y horas estimadas para que no pierdas tiempo decidiendo.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Agenda accionable</h3>
+              <p>Ves materia, estado, fecha limite y esfuerzo en una sola tarjeta, sin depender de planillas externas.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Seguimiento simple</h3>
+              <p>Cambias de pendiente a en progreso o terminada con confirmacion, manteniendo el control de cada avance.</p>
+            </article>
+          </div>
         </section>
 
-        <section class="experience-section" id="experiencia">
-          <div>
+        <section class="landing-section experience-section" id="experiencia">
+          <div class="landing-section-heading">
             <p class="eyebrow">Experiencia</p>
-            <h2>Menos carga mental, mas accion</h2>
-            <p>Entras, ves que importa, cargas avances y seguis. Sin menues innecesarios ni planillas eternas.</p>
+            <h2>Un recorrido pensado para estudiantes con entregas reales</h2>
+            <p>La app evita que tengas que recordar todo. Entrar al panel ya te muestra donde conviene poner foco.</p>
           </div>
-          <div class="steps-preview">
-            <span>Crear tarea</span>
-            <span>Ver prioridad</span>
-            <span>Avanzar</span>
-            <span>Revisar asistente</span>
+
+          <div class="experience-grid">
+            <article>
+              <strong>1</strong>
+              <h3>Cargas la tarea</h3>
+              <p>Materia, tipo, fecha, dificultad y horas estimadas. Lo suficiente para planificar sin burocracia.</p>
+            </article>
+            <article>
+              <strong>2</strong>
+              <h3>El panel te ordena</h3>
+              <p>El foco principal aparece primero, con metricas de urgencia y horas pendientes.</p>
+            </article>
+            <article>
+              <strong>3</strong>
+              <h3>Avanzas sin perder contexto</h3>
+              <p>Abres el detalle, editas cambios y actualizas estado sin salir del flujo de estudio.</p>
+            </article>
+            <article>
+              <strong>4</strong>
+              <h3>Recibes orientacion</h3>
+              <p>Hugo resume que conviene atender y por que, usando los datos de tus tareas.</p>
+            </article>
           </div>
         </section>
 
-        <section class="tech-section" id="tecnologia">
-          <p class="eyebrow">Confianza</p>
-          <h2>Tu plan siempre ordenado y disponible</h2>
+        <section class="landing-section tech-section" id="tecnologia">
+          <div class="landing-section-heading">
+            <p class="eyebrow">Tecnologia</p>
+            <h2>Base solida para que tu plan no dependa del dispositivo</h2>
+            <p>La parte tecnica esta al servicio de la experiencia: acceso seguro, datos persistentes y despliegue online.</p>
+          </div>
+
           <div class="tech-grid">
-            <span>Acceso seguro</span>
-            <span>Progreso guardado</span>
-            <span>Agenda sincronizada</span>
-            <span>Recomendaciones claras</span>
-            <span>Disponible online</span>
-            <span>Compatible con mobile</span>
+            <article>
+              <span>Seguro</span>
+              <h3>Cuenta con inicio de sesion</h3>
+              <p>Registro e ingreso con token para separar la agenda de cada estudiante.</p>
+            </article>
+            <article>
+              <span>Persistente</span>
+              <h3>Tareas guardadas</h3>
+              <p>La informacion queda en base de datos y vuelve a aparecer al iniciar sesion.</p>
+            </article>
+            <article>
+              <span>Online</span>
+              <h3>Preparado para deploy</h3>
+              <p>Arquitectura lista para Render y Neon, con Docker para ejecutar localmente.</p>
+            </article>
           </div>
         </section>
       </main>
@@ -136,7 +175,7 @@
 
     <section class="auth-page hidden" id="auth-page">
       <button class="brand brand-button" type="button" data-go-home>
-        <span class="brand-mark">SP</span>
+        <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
         <span>
           <strong>Study Planner</strong>
           <small>Volver al inicio</small>
@@ -168,7 +207,7 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-head">
           <div class="brand">
-            <span class="brand-mark">SP</span>
+            <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
             <span>
               <strong>Study Planner</strong>
               <small>Agenda academica</small>
@@ -413,10 +452,14 @@
       </main>
 
       <section class="chatbot" id="chatbot">
-        <button class="chatbot-button" id="chatbot-toggle" type="button">Asistente</button>
+        <button class="chatbot-button" id="chatbot-toggle" type="button">
+          <img src="assets/hugo-mascot.png" alt="" />
+          <span>Hugo</span>
+        </button>
         <div class="chatbot-panel hidden" id="chatbot-panel">
           <div class="chatbot-head">
-            <strong>Recomendaciones de estudio</strong>
+            <img src="assets/hugo-mascot.png" alt="" />
+            <strong>Hugo, asistente virtual</strong>
             <button class="icon-button" id="chatbot-close" type="button">x</button>
           </div>
           <div id="ai-recommendations" class="chatbot-messages"></div>
@@ -424,6 +467,6 @@
       </section>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
