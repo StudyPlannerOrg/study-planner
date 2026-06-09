@@ -108,11 +108,27 @@ app.patch("/api/tasks/:id", authenticate, async (req, res) => {
   const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
   if (!Object.keys(updates).length) return res.status(400).json({ message: "No hay cambios validos." });
 
+  const currentResult = await pool.query(
+    `select id, title, subject, type, due_date, hours, notes, difficulty, status
+     from tasks
+     where id = $1 and user_id = $2`,
+    [req.params.id, req.user.id]
+  );
+
+  if (!currentResult.rows[0]) return res.status(404).json({ message: "Tarea no encontrada." });
+
+  const normalized = normalizeTask({
+    ...fromDatabaseTask(currentResult.rows[0]),
+    ...updates,
+  });
+
+  if (!normalized) return res.status(400).json({ message: "Datos de tarea invalidos." });
+
   const fields = [];
   const values = [];
-  Object.entries(updates).forEach(([key, value]) => {
+  Object.keys(updates).forEach((key) => {
     const column = key === "dueDate" ? "due_date" : key;
-    values.push(value);
+    values.push(normalized[key]);
     fields.push(`${column} = $${values.length}`);
   });
 
