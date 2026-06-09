@@ -38,25 +38,72 @@ const demoTasks = [
   },
 ];
 
+const landingPage = document.querySelector("#landing-page");
+const authPage = document.querySelector("#auth-page");
+const appShell = document.querySelector("#app-shell");
+const sidebar = document.querySelector("#sidebar");
+const sidebarToggle = document.querySelector("#sidebar-toggle");
+const mobileMenu = document.querySelector("#mobile-menu");
 const form = document.querySelector("#task-form");
+const editTaskForm = document.querySelector("#edit-task-form");
 const list = document.querySelector("#task-list");
+const focusList = document.querySelector("#focus-list");
 const recommendations = document.querySelector("#ai-recommendations");
 const search = document.querySelector("#search");
 const difficultyFilter = document.querySelector("#difficulty-filter");
-const seedButton = document.querySelector("#seed-data");
 const authForm = document.querySelector("#auth-form");
-const signOutButton = document.querySelector("#sign-out");
 const authTitle = document.querySelector("#auth-title");
 const authCopy = document.querySelector("#auth-copy");
+const authSubmit = document.querySelector("#auth-submit");
+const authSwitch = document.querySelector("#auth-switch");
+const signOutButton = document.querySelector("#sign-out");
 const storageStatus = document.querySelector("#storage-status");
+const chatbotToggle = document.querySelector("#chatbot-toggle");
+const chatbotPanel = document.querySelector("#chatbot-panel");
+const chatbotClose = document.querySelector("#chatbot-close");
 
 let tasks = [];
 let token = localStorage.getItem(TOKEN_KEY);
 let currentUser = readJson(USER_KEY);
 let apiAvailable = false;
 let authAction = "login";
+let activeView = "dashboard";
+let selectedTaskId = null;
 
 init();
+
+document.querySelectorAll("[data-auth-action]").forEach((button) => {
+  button.addEventListener("click", () => showAuth(button.dataset.authAction));
+});
+
+document.querySelectorAll("[data-go-home]").forEach((button) => {
+  button.addEventListener("click", showLanding);
+});
+
+document.querySelectorAll("[data-view]").forEach((button) => {
+  button.addEventListener("click", () => setView(button.dataset.view));
+});
+
+authSwitch.addEventListener("click", () => {
+  setAuthMode(authAction === "login" ? "register" : "login");
+});
+
+sidebarToggle.addEventListener("click", () => {
+  sidebar.classList.toggle("collapsed");
+  appShell.classList.toggle("sidebar-collapsed");
+});
+
+mobileMenu.addEventListener("click", () => {
+  sidebar.classList.toggle("open");
+});
+
+chatbotToggle.addEventListener("click", () => {
+  chatbotPanel.classList.toggle("hidden");
+});
+
+chatbotClose.addEventListener("click", () => {
+  chatbotPanel.classList.add("hidden");
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -87,17 +134,34 @@ form.addEventListener("submit", async (event) => {
   form.hours.value = 2;
   form.dueDate.value = todayOffset(1);
   render();
+  setView("dashboard");
 });
 
-authForm.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-auth-action]");
-  if (button) authAction = button.dataset.authAction;
+editTaskForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!selectedTaskId) return;
+
+  const data = new FormData(editTaskForm);
+  const changes = {
+    title: data.get("title").trim(),
+    subject: data.get("subject"),
+    type: data.get("type"),
+    dueDate: data.get("dueDate"),
+    hours: Number(data.get("hours")),
+    notes: data.get("notes").trim(),
+    difficulty: data.get("difficulty"),
+    status: data.get("status"),
+  };
+
+  await updateTask(selectedTaskId, changes);
+  render();
+  setView("agenda");
 });
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!apiAvailable) {
-    authCopy.textContent = "El backend no esta disponible. Ejecuta npm start con DATABASE_URL configurada.";
+    authCopy.textContent = "El backend no esta disponible. Revisa el deploy o intenta nuevamente.";
     return;
   }
 
@@ -118,58 +182,52 @@ authForm.addEventListener("submit", async (event) => {
   localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
   authForm.reset();
   await loadCloudTasks();
-  updateAuthUi();
+  updateSessionUi();
+  showApp();
   render();
 });
 
 signOutButton.addEventListener("click", () => {
   token = null;
   currentUser = null;
+  tasks = [];
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
-  tasks = loadLocalTasks();
-  updateAuthUi();
-  render();
+  updateSessionUi();
+  showLanding();
 });
 
 search.addEventListener("input", render);
 difficultyFilter.addEventListener("change", render);
 
-seedButton.addEventListener("click", async () => {
-  const nextTasks = sortTasks([...demoTasks.map((task) => ({ ...task, id: crypto.randomUUID() }))]);
+list.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    const card = event.target.closest(".task-card[data-id]");
+    if (card) openTaskDetail(card.dataset.id);
+    return;
+  }
 
-  if (isCloudMode()) {
-    const result = await apiRequest("/api/tasks/demo", {
-      method: "POST",
-      body: JSON.stringify({ tasks: nextTasks }),
-    });
-    if (result) await loadCloudTasks();
-  } else {
-    tasks = nextTasks;
-    persistLocal();
+  const { action, id } = button.dataset;
+  if (action === "progress" && confirmAction("Marcar esta tarea como en progreso?")) {
+    await updateTask(id, { status: "En progreso" });
+  }
+  if (action === "done" && confirmAction("Marcar esta tarea como terminada?")) {
+    await updateTask(id, { status: "Terminada" });
+  }
+  if (action === "delete" && confirmAction("Eliminar esta tarea? Esta accion no se puede deshacer.")) {
+    await deleteTask(id);
   }
 
   render();
 });
 
-list.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-action]");
-  if (!button) return;
-
-  const { action, id } = button.dataset;
-  if (action === "progress") {
-    await updateTask(id, { status: "En progreso" });
-  }
-
-  if (action === "done") {
-    await updateTask(id, { status: "Terminada" });
-  }
-
-  if (action === "delete") {
-    await deleteTask(id);
-  }
-
-  render();
+list.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest(".task-card[data-id]");
+  if (!card) return;
+  event.preventDefault();
+  openTaskDetail(card.dataset.id);
 });
 
 async function init() {
@@ -179,12 +237,17 @@ async function init() {
 
   if (isCloudMode()) {
     await loadCloudTasks();
+    if (isCloudMode()) {
+      showApp();
+      render();
+    } else {
+      showLanding();
+    }
   } else {
-    tasks = loadLocalTasks();
+    showLanding();
   }
 
-  updateAuthUi();
-  render();
+  updateSessionUi();
 }
 
 async function checkApiHealth() {
@@ -197,34 +260,86 @@ async function checkApiHealth() {
   }
 }
 
-function isCloudMode() {
-  return Boolean(apiAvailable && token && currentUser);
+function showLanding() {
+  landingPage.classList.remove("hidden");
+  authPage.classList.add("hidden");
+  appShell.classList.add("hidden");
 }
 
-function updateAuthUi() {
+function showAuth(action) {
+  setAuthMode(action);
+  landingPage.classList.add("hidden");
+  authPage.classList.remove("hidden");
+  appShell.classList.add("hidden");
+  authForm.email.focus();
+}
+
+function showApp() {
+  landingPage.classList.add("hidden");
+  authPage.classList.add("hidden");
+  appShell.classList.remove("hidden");
+  setView(activeView);
+}
+
+function confirmAction(message) {
+  return window.confirm(message);
+}
+
+function openTaskDetail(id) {
+  const task = tasks.find((item) => item.id === id);
+  if (!task) return;
+
+  selectedTaskId = id;
+  editTaskForm.title.value = task.title;
+  editTaskForm.subject.value = task.subject;
+  editTaskForm.type.value = task.type;
+  editTaskForm.dueDate.value = normalizeDateValue(task.dueDate);
+  editTaskForm.hours.value = task.hours;
+  editTaskForm.notes.value = task.notes;
+  editTaskForm.difficulty.value = task.difficulty;
+  editTaskForm.status.value = task.status;
+  setView("detail");
+}
+
+function setAuthMode(action) {
+  authAction = action;
+  const isRegister = action === "register";
+  authTitle.textContent = isRegister ? "Crea tu cuenta" : "Ingresa a tu planner";
+  authCopy.textContent = isRegister
+    ? "Registrate para guardar tus tareas, prioridades y progreso."
+    : "Ingresa con tu cuenta para continuar al panel.";
+  authSubmit.textContent = isRegister ? "Crear cuenta" : "Ingresar";
+  authSwitch.textContent = isRegister ? "Ya tengo cuenta" : "Crear cuenta";
+}
+
+function setView(view) {
+  activeView = view;
+  document.querySelectorAll(".view-section").forEach((section) => {
+    section.classList.toggle("hidden", section.id !== `view-${view}`);
+  });
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+  sidebar.classList.remove("open");
+}
+
+function updateSessionUi() {
   if (!apiAvailable) {
-    authTitle.textContent = "Modo local";
-    authCopy.textContent = "El backend no esta disponible. La app guarda datos en este navegador.";
-    storageStatus.textContent = "Modo local activo";
-    signOutButton.classList.add("hidden");
-    authForm.classList.remove("hidden");
+    authCopy.textContent = "El backend no esta disponible. Revisa el deploy o intenta nuevamente.";
+    storageStatus.textContent = "Sin conexion";
     return;
   }
 
   if (!token || !currentUser) {
-    authTitle.textContent = "Backend disponible";
-    authCopy.textContent = "Crea una cuenta o ingresa para sincronizar tareas con PostgreSQL.";
-    storageStatus.textContent = "API conectada";
-    signOutButton.classList.add("hidden");
-    authForm.classList.remove("hidden");
+    storageStatus.textContent = "Servicio listo";
     return;
   }
 
-  authTitle.textContent = "Sesion activa";
-  authCopy.textContent = `Tareas sincronizadas para ${currentUser.email}.`;
-  storageStatus.textContent = "PostgreSQL activo";
-  signOutButton.classList.remove("hidden");
-  authForm.classList.add("hidden");
+  storageStatus.textContent = "Cuenta activa";
+}
+
+function isCloudMode() {
+  return Boolean(apiAvailable && token && currentUser);
 }
 
 function loadLocalTasks() {
@@ -244,7 +359,7 @@ function persistLocal() {
 
 async function loadCloudTasks() {
   const data = await apiRequest("/api/tasks");
-  if (data) tasks = sortTasks(data);
+  if (data) tasks = sortTasks(data.map(normalizeTaskDates));
 }
 
 async function updateTask(id, changes) {
@@ -253,7 +368,7 @@ async function updateTask(id, changes) {
       method: "PATCH",
       body: JSON.stringify(changes),
     });
-    if (updated) tasks = tasks.map((task) => (task.id === id ? updated : task));
+    if (updated) tasks = tasks.map((task) => (task.id === id ? normalizeTaskDates(updated) : task));
     return;
   }
 
@@ -300,9 +415,9 @@ async function apiRequest(path, options = {}) {
 }
 
 function render() {
-  const filtered = getFilteredTasks();
   renderMetrics();
-  renderTasks(filtered);
+  renderFocus();
+  renderTasks(getFilteredTasks());
   renderRecommendations();
 }
 
@@ -329,6 +444,30 @@ function renderMetrics() {
   document.querySelector("#metric-hours").textContent = `${hours} h`;
 }
 
+function renderFocus() {
+  const active = tasks.filter((task) => task.status !== "Terminada").slice(0, 3);
+
+  if (!active.length) {
+    focusList.innerHTML = `<div class="empty-state">No hay tareas activas. Crea una para empezar.</div>`;
+    return;
+  }
+
+  focusList.innerHTML = active
+    .map((task) => {
+      const score = calculatePriorityScore(task);
+      return `
+        <article class="focus-item">
+          <div>
+            <strong>${escapeHtml(task.title)}</strong>
+            <span>${escapeHtml(task.subject)} - ${formatDate(task.dueDate)}</span>
+          </div>
+          <b>${score}/100</b>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderTasks(items) {
   if (!items.length) {
     list.innerHTML = `<div class="empty-state">No hay tareas para los filtros seleccionados.</div>`;
@@ -340,7 +479,7 @@ function renderTasks(items) {
       const score = calculatePriorityScore(task);
       const priority = score >= 75 ? "Urgente" : score >= 45 ? "Alta" : "Normal";
       return `
-        <article class="task-card" data-priority="${priority}">
+        <article class="task-card" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Ver o editar ${escapeHtml(task.title)}">
           <div class="task-main">
             <div>
               <strong>${escapeHtml(task.title)}</strong>
@@ -379,20 +518,19 @@ function renderRecommendations() {
     .slice(0, 3);
 
   if (!ranked.length) {
-    recommendations.innerHTML = `<div class="empty-state">No hay tareas activas para analizar.</div>`;
+    recommendations.innerHTML = `<div class="chat-message bot">Crea una tarea y te ayudo a priorizarla.</div>`;
     return;
   }
 
   recommendations.innerHTML = ranked
-    .map(({ task, score, reason }) => {
-      const level = score >= 75 ? "urgent" : score >= 45 ? "high" : "normal";
-      return `
-        <article class="recommendation-card ${level}">
+    .map(
+      ({ task, score, reason }) => `
+        <div class="chat-message bot">
           <strong>${escapeHtml(task.title)} - ${score}/100</strong>
-          <p>${reason}</p>
-        </article>
-      `;
-    })
+          <span>${reason}</span>
+        </div>
+      `
+    )
     .join("");
 }
 
@@ -424,27 +562,43 @@ function explainPriority(task) {
   const dueText = days < 0 ? "ya esta vencida" : days === 0 ? "vence hoy" : `vence en ${days} dia(s)`;
 
   if (score >= 75) {
-    return `Prioridad maxima: ${dueText}, tiene dificultad ${task.difficulty.toLowerCase()} y requiere ${task.hours} hora(s) estimadas.`;
+    return `Prioridad maxima: ${dueText}, dificultad ${task.difficulty.toLowerCase()} y ${task.hours} hora(s) estimadas.`;
   }
 
   if (score >= 45) {
-    return `Conviene bloquear tiempo esta semana: ${dueText} y todavia demanda ${task.hours} hora(s) de trabajo.`;
+    return `Conviene reservar tiempo esta semana: ${dueText} y demanda ${task.hours} hora(s).`;
   }
 
-  return `Puede planificarse despues de las tareas criticas: ${dueText} y su carga actual es manejable.`;
+  return `Puede planificarse despues de las tareas criticas: ${dueText}.`;
 }
 
 function sortTasks(items) {
-  return items.sort((a, b) => {
+  return items.map(normalizeTaskDates).sort((a, b) => {
     const byScore = calculatePriorityScore(b) - calculatePriorityScore(a);
     if (byScore !== 0) return byScore;
-    return a.dueDate.localeCompare(b.dueDate);
+    return normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate));
   });
+}
+
+function normalizeTaskDates(task) {
+  return {
+    ...task,
+    dueDate: normalizeDateValue(task.dueDate),
+  };
+}
+
+function normalizeDateValue(value) {
+  if (!value) return todayOffset(0);
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return todayOffset(0);
+  return date.toISOString().slice(0, 10);
 }
 
 function daysUntil(value) {
   const today = new Date(todayOffset(0));
-  const due = new Date(value);
+  const due = new Date(normalizeDateValue(value));
   const diff = due.getTime() - today.getTime();
   return Math.ceil(diff / 86400000);
 }
@@ -456,7 +610,8 @@ function todayOffset(offset) {
 }
 
 function formatDate(value) {
-  const [year, month, day] = value.split("-");
+  const normalized = normalizeDateValue(value);
+  const [year, month, day] = normalized.split("-");
   return `${day}/${month}/${year}`;
 }
 
