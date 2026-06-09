@@ -1,5 +1,7 @@
 # Study Planner
 
+![Hugo, asistente virtual de Study Planner](frontend/assets/hugo-mascot.png)
+
 Study Planner es una aplicacion full stack para organizar tareas academicas, entregas, parciales y horas de estudio. El sistema permite crear una cuenta, iniciar sesion, guardar tareas en PostgreSQL, filtrar la agenda, marcar avances y recibir recomendaciones de priorizacion con un asistente basado en reglas explicables.
 
 El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias materias, fechas limite y trabajos pendientes.
@@ -14,8 +16,14 @@ El objetivo del proyecto es resolver un problema real de estudiantes: decidir qu
 - Fallback local con `localStorage` si el backend no esta disponible.
 - Agenda filtrable por texto y dificultad.
 - Metricas de tareas activas, urgentes, entregas de la semana y horas pendientes.
-- Asistente de estudio que calcula un puntaje de prioridad segun vencimiento, dificultad, tipo de tarea y carga horaria.
+- Hugo, asistente virtual de la app, calcula un puntaje de prioridad segun vencimiento, dificultad, tipo de tarea y carga horaria.
 - Agente autonomo de revision del repositorio mediante GitHub Actions.
+
+## Identidad visual
+
+- Mascota/asistente virtual: Hugo, el buho de `frontend/assets/hugo-mascot.png`.
+- La interfaz usa a Hugo en la navegacion, el favicon y el asistente flotante.
+- Si se cuenta con el logo original exacto con texto, guardarlo como `frontend/assets/logo-original.png` y usarlo solo en piezas de marca/documentacion.
 
 ## Tecnologias usadas
 
@@ -40,7 +48,7 @@ El objetivo del proyecto es resolver un problema real de estudiantes: decidir qu
 npm install
 ```
 
-2. Crear un archivo `.env` usando `.env.example` como base:
+2. Crear un archivo `.env` usando `.env.example` como base. Este archivo es local y no se sube al repositorio:
 
 ```env
 PORT=3000
@@ -48,13 +56,19 @@ DATABASE_URL=postgres://usuario:password@localhost:5432/study_planner
 JWT_SECRET=cambia-este-secreto-en-produccion
 ```
 
-3. Ejecutar la aplicacion:
+3. Verificar que las variables locales esten completas:
+
+```bash
+npm run check:env
+```
+
+4. Ejecutar la aplicacion:
 
 ```bash
 npm start
 ```
 
-4. Abrir:
+5. Abrir:
 
 ```text
 http://localhost:3000
@@ -73,7 +87,7 @@ docker compose up --build
 Luego abrir:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
 Este modo crea un contenedor para la app y otro para PostgreSQL.
@@ -128,11 +142,11 @@ JWT_SECRET
 PORT
 ```
 
-La guia paso a paso esta en `DEPLOY.md`.
+La guia paso a paso esta en `docs/deploy.md`.
 
 ## Trabajo colaborativo
 
-El proyecto esta preparado para mostrar aportes individuales mediante ramas y pull requests. La guia esta en `CONTRIBUTING.md`.
+El proyecto esta preparado para mostrar aportes individuales mediante ramas y pull requests. La guia esta en `docs/colaboracion.md`.
 
 Ramas sugeridas:
 
@@ -149,23 +163,48 @@ Cada integrante debe trabajar en su rama, hacer commits propios y abrir un Pull 
 
 ```text
 .
-|-- index.html
-|-- styles.css
-|-- app.js
-|-- server.js
 |-- package.json
 |-- Dockerfile
 |-- docker-compose.yml
 |-- .dockerignore
 |-- render.yaml
-|-- DEPLOY.md
-|-- CONTRIBUTING.md
+|-- .env                  # local, ignorado por Git
 |-- .env.example
+|-- frontend/
+|   |-- index.html
+|   |-- styles.css
+|   |-- app.js
+|   |-- assets/
+|   |   `-- hugo-mascot.png
+|   |-- css/
+|   |   |-- base.css
+|   |   |-- landing.css
+|   |   |-- auth.css
+|   |   |-- app.css
+|   |   `-- responsive.css
+|   `-- js/
+|       |-- config.js
+|       |-- dates.js
+|       |-- demoTasks.js
+|       |-- helpers.js
+|       `-- priority.js
+|-- backend/
+|   |-- server.js
+|   |-- config.js
+|   |-- db.js
+|   |-- routes/
+|   |-- middleware/
+|   `-- utils/
 |-- db/
 |   `-- schema.sql
 |-- scripts/
-|   `-- repo-agent.js
-|-- INFORME.md
+|   |-- repo-agent.js
+|   `-- check-env.js
+|-- docs/
+|   |-- deploy.md
+|   |-- colaboracion.md
+|   |-- informe-tecnico.md
+|   `-- consigna-tp-integrador.pdf
 `-- .github/workflows/
     |-- ci.yml
     `-- agent-review.yml

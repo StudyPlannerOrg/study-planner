@@ -1,0 +1,37 @@
+const path = require("node:path");
+const cors = require("cors");
+const express = require("express");
+const config = require("./config");
+const { initializeDatabase, pool } = require("./db");
+const authRoutes = require("./routes/auth");
+const taskRoutes = require("./routes/tasks");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(config.publicDir));
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    database: Boolean(pool),
+  });
+});
+
+app.use("/api/auth", authRoutes);
+app.use("/api/tasks", taskRoutes);
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(config.publicDir, "index.html"));
+});
+
+start();
+
+async function start() {
+  await initializeDatabase();
+
+  app.listen(config.port, () => {
+    console.log(`Study Planner escuchando en http://localhost:${config.port}`);
+  });
+}

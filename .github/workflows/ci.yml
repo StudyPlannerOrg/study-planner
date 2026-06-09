@@ -15,36 +15,38 @@ jobs:
 
       - name: Validate required files
         run: |
-          test -f index.html
-          test -f styles.css
-          test -f app.js
-          test -f server.js
+          test -f frontend/index.html
+          test -f frontend/styles.css
+          test -f frontend/app.js
+          test -f frontend/assets/hugo-mascot.png
+          test -f backend/server.js
           test -f package.json
           test -f Dockerfile
           test -f docker-compose.yml
           test -f .dockerignore
           test -f render.yaml
-          test -f DEPLOY.md
-          test -f CONTRIBUTING.md
+          test -f docs/deploy.md
+          test -f docs/colaboracion.md
           test -f .env.example
           test -f db/schema.sql
           test -f README.md
-          test -f INFORME.md
+          test -f docs/informe-tecnico.md
           test -f scripts/repo-agent.js
           test -f .github/workflows/agent-review.yml
 
       - name: Check for basic HTML structure
         run: |
-          grep -q "<title>Study Planner" index.html
-          grep -q "task-form" index.html
-          grep -q "localStorage" app.js
-          grep -q "/api/tasks" app.js
-          grep -q "express" server.js
+          grep -q "<title>Study Planner" frontend/index.html
+          grep -q "task-form" frontend/index.html
+          grep -q "Hugo" frontend/index.html
+          grep -q "localStorage" frontend/app.js
+          grep -q "/api/tasks" frontend/app.js
+          grep -q "express" backend/server.js
           grep -q "create table if not exists tasks" db/schema.sql
           grep -q "startCommand: npm start" render.yaml
-          grep -q "Neon" DEPLOY.md
+          grep -q "Neon" docs/deploy.md
           grep -q "postgres:16-alpine" docker-compose.yml
-          grep -q "feature/frontend-ui" CONTRIBUTING.md
+          grep -q "feature/frontend-ui" docs/colaboracion.md
 
       - name: Check JavaScript syntax
         run: npm run check
