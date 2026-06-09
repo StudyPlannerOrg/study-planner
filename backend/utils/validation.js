@@ -1,3 +1,5 @@
+const { TASK_DIFFICULTIES, TASK_STATUSES, TASK_TYPES } = require("../constants/taskOptions");
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").toLowerCase());
 }
@@ -11,7 +13,6 @@ function normalizeTask(task) {
 
   const normalized = {
     title: String(task.title || "").trim(),
-    subject: String(task.subject || "").trim(),
     type: String(task.type || "").trim(),
     dueDate: String(task.dueDate || "").slice(0, 10),
     hours: normalizeHours(task.hours),
@@ -21,9 +22,9 @@ function normalizeTask(task) {
     status: String(task.status || "Pendiente").trim(),
   };
 
-  const validDifficulty = ["Baja", "Media", "Alta"].includes(normalized.difficulty);
-  const validStatus = ["Pendiente", "En progreso", "Terminada"].includes(normalized.status);
-  const validType = ["Trabajo practico", "Parcial", "Final", "Lectura", "Exposicion"].includes(normalized.type);
+  const validDifficulty = TASK_DIFFICULTIES.includes(normalized.difficulty);
+  const validStatus = TASK_STATUSES.includes(normalized.status);
+  const validType = TASK_TYPES.includes(normalized.type);
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(normalized.dueDate);
   const validHours = normalized.hours === null || normalized.hours >= 1;
 

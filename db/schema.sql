@@ -9,7 +9,6 @@ create table if not exists tasks (
   id text primary key,
   user_id text not null references users(id) on delete cascade,
   title text not null,
-  subject text,
   type text not null,
   due_date date not null,
   hours integer check (hours is null or hours > 0),
@@ -20,7 +19,6 @@ create table if not exists tasks (
   created_at timestamptz not null default now()
 );
 
-alter table tasks alter column subject drop not null;
 alter table tasks alter column hours drop not null;
 alter table tasks alter column notes drop not null;
 alter table tasks add column if not exists checklist jsonb not null default '[]'::jsonb;

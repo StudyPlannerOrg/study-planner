@@ -1,8 +1,9 @@
+const { calculatePriorityScore, explainPriority, getPriorityLabel } = require("../services/priorityService");
+
 function fromDatabaseTask(row) {
-  return {
+  const task = {
     id: row.id,
     title: row.title,
-    subject: row.subject,
     type: row.type,
     dueDate: formatDatabaseDate(row.due_date),
     hours: row.hours,
@@ -10,6 +11,16 @@ function fromDatabaseTask(row) {
     checklist: Array.isArray(row.checklist) ? row.checklist : [],
     difficulty: row.difficulty,
     status: row.status,
+  };
+
+  const score = calculatePriorityScore(task);
+  return {
+    ...task,
+    priority: {
+      label: getPriorityLabel(score),
+      reason: explainPriority(task),
+      score,
+    },
   };
 }
 
