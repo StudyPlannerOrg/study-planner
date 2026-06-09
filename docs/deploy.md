@@ -101,6 +101,7 @@ N8N_ENCRYPTION_KEY=<texto largo fijo, no cambiar despues>
 N8N_HOST=study-planner-n8n.onrender.com
 WEBHOOK_URL=https://study-planner-n8n.onrender.com/
 N8N_EDITOR_BASE_URL=https://study-planner-n8n.onrender.com/
+N8N_SHARED_SECRET=<mismo valor configurado en la app>
 ```
 
 Notas importantes:
@@ -109,6 +110,7 @@ Notas importantes:
 - Para n8n online conviene usar Neon/PostgreSQL. No depender de almacenamiento temporal del contenedor.
 - En Render Free el servicio puede dormirse. El primer webhook puede tardar mas si n8n estaba dormido.
 - Si se cambia el nombre del servicio en Render, tambien cambiar `N8N_HOST`, `WEBHOOK_URL` y `N8N_EDITOR_BASE_URL`.
+- El workflow online puede leer `{{$env.N8N_SHARED_SECRET}}`, por eso n8n tambien debe tener esa variable configurada.
 
 Luego, dentro de n8n, crear el usuario inicial y configurar el workflow programado de recordatorios.
 

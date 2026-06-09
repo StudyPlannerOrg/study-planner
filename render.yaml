@@ -59,3 +59,5 @@ services:
         sync: false
       - key: N8N_EDITOR_BASE_URL
         sync: false
+      - key: N8N_SHARED_SECRET
+        sync: false

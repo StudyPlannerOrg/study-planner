@@ -1,0 +1,163 @@
+{
+  "name": "Avisos por vencimiento",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -640,
+        96
+      ],
+      "id": "f3e1af93-b356-485c-a5b7-260ef3b2815a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://study-planner-05jn.onrender.com/api/tasks/due-reminders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-secret",
+              "value": "={{$env.N8N_SHARED_SECRET}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -432,
+        96
+      ],
+      "id": "b28426f3-955a-48e6-a5ed-dbf44dce8dbd",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "=studyyplanner1@gmail.com",
+        "subject": "={{$json.reminders[0].reminder.label}}: {{$json.reminders[0].task.title}}",
+        "message": "=<h2>Study Planner</h2>\n\n<p><strong>Próxima tarea:</strong></p>\n\n<ul>\n  <li><strong>Tarea:</strong> {{$json.reminders[0].task.title}}</li>\n  <li><strong>Fecha límite:</strong> {{$json.reminders[0].task.dueDate}}</li>\n  <li><strong>Hora de entrega:</strong> {{$json.reminders[0].task.dueTime || \"Sin hora definida\"}}</li>\n  <li><strong>Estado:</strong> {{$json.reminders[0].task.status}}</li>\n  <li><strong>Dificultad:</strong> {{$json.reminders[0].task.difficulty}}</li>\n</ul>\n\n<hr>\n\n<p><strong>También vencen hoy o mañana:</strong></p>\n\n<ul>\n  {{\n    $json.reminders.map((item) => `\n      <li>\n        <strong>${item.task.title}</strong> -\n        ${item.reminder.label} -\n        ${item.task.dueDate} -\n        ${item.task.dueTime || \"Sin hora\"} -\n        ${item.task.status} -\n        dificultad ${item.task.difficulty}\n      </li>\n    `).join(\"\")\n  }}\n</ul>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bdd7a8b6-f38b-4e5e-ad8b-9f1a21d95df2",
+      "name": "Send a message",
+      "webhookId": "f93f3471-cb4e-4149-8fbd-c065e6e2bda9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Hs7kR5rlmazYc6Z4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "acb7ad03-b1bc-47e3-85b2-0a2dfb6184d1",
+              "leftValue": "={{ $json.reminders.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        96
+      ],
+      "id": "57f0f653-366f-4bd7-9965-85a35fa42aa0",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b3c50e30-9e6f-4374-9c73-ead056f76cf6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0793980d735c382e4c492a968451ad39e2fbc46c39825d3f083ddad080832304"
+  },
+  "nodeGroups": [],
+  "id": "JAtopDWLXxPNCwAv",
+  "tags": [
+    {
+      "updatedAt": "2026-06-09T22:45:49.902Z",
+      "createdAt": "2026-06-09T22:45:49.902Z",
+      "id": "RE5F2ZSGSeLVb44a",
+      "name": "Study Planner"
+    }
+  ]
+}

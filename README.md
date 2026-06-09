@@ -4,7 +4,7 @@
 
 Study Planner es una aplicacion full stack para organizar tareas academicas, entregas, parciales y horas de estudio. El sistema permite crear una cuenta, iniciar sesion, guardar tareas en PostgreSQL, filtrar la agenda, marcar avances y recibir recomendaciones de priorizacion con un asistente basado en reglas explicables.
 
-El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias materias, fechas limite y trabajos pendientes.
+El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias fechas limite, tareas y trabajos pendientes.
 
 ## Funcionalidades
 
@@ -207,6 +207,12 @@ URL: http://app:3000/api/tasks/due-reminders
 Header: x-n8n-secret = docker-n8n-secret
 ```
 
+Workflow para importar en n8n local:
+
+```text
+n8n/workflows/local/avisos-por-vencimiento.local.json
+```
+
 Configuracion online del `HTTP Request`:
 
 ```text
@@ -214,6 +220,14 @@ Method: GET
 URL: https://study-planner.onrender.com/api/tasks/due-reminders
 Header: x-n8n-secret = el mismo valor de N8N_SHARED_SECRET configurado en Render
 ```
+
+Workflow para importar en n8n online:
+
+```text
+n8n/workflows/online/avisos-por-vencimiento.online.json
+```
+
+El workflow online usa `{{$env.N8N_SHARED_SECRET}}`; configurar esa variable tambien en el servicio n8n de Render.
 
 Luego en `If`, usar la condicion:
 
@@ -273,18 +287,31 @@ Cada integrante debe trabajar en su rama, hacer commits propios y abrir un Pull 
 |   |   |-- app.css
 |   |   `-- responsive.css
 |   `-- js/
+|       |-- api.js
+|       |-- chatbot.js
+|       |-- checklist.js
 |       |-- config.js
 |       |-- dates.js
 |       |-- demoTasks.js
 |       |-- helpers.js
-|       `-- priority.js
+|       |-- notifications.js
+|       |-- priority.js
+|       |-- storage.js
+|       `-- taskUtils.js
 |-- backend/
 |   |-- server.js
 |   |-- config.js
 |   |-- db.js
+|   |-- constants/
+|   |-- services/
+|   |-- repositories/
 |   |-- routes/
 |   |-- middleware/
 |   `-- utils/
+|-- n8n/
+|   `-- workflows/
+|       |-- local/
+|       `-- online/
 |-- db/
 |   `-- schema.sql
 |-- scripts/
@@ -309,10 +336,11 @@ El repositorio incluye un agente autonomo de revision en `scripts/repo-agent.js`
 - Informe tecnico con herramientas y lecciones aprendidas.
 - Persistencia local en la app.
 - Backend Express con API REST.
+- Reglas de tareas respaldadas en servicios del backend.
 - Base PostgreSQL.
 - Configuracion de despliegue en Render.
 - Configuracion Docker.
-- Existencia del asistente de priorizacion.
+- Existencia del asistente de priorizacion en frontend y respaldo de prioridad en backend.
 - Coherencia del enfoque academico de Study Planner.
 
 El resultado queda disponible como artefacto del workflow `Autonomous Agent Review`.
