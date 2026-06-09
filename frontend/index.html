@@ -217,7 +217,7 @@
         </div>
 
         <nav class="nav-list" aria-label="Navegacion principal">
-          <button class="active" type="button" data-view="dashboard" data-short="P">Panel</button>
+          <button class="active" type="button" data-view="dashboard" data-short="I">Inicio</button>
           <button type="button" data-view="task" data-short="+">Nueva tarea</button>
           <button type="button" data-view="agenda" data-short="A">Agenda</button>
         </nav>
@@ -235,8 +235,25 @@
             <p class="eyebrow">Panel de trabajo</p>
             <h1>Hola, organicemos lo importante</h1>
           </div>
-          <button class="ghost-button" id="sign-out" type="button">Cerrar sesion</button>
+          <div class="topbar-actions">
+            <button class="ghost-button notification-toggle" id="notification-toggle" type="button">
+              Notificaciones
+              <span id="notification-count">0</span>
+            </button>
+            <button class="ghost-button" id="sign-out" type="button">Cerrar sesion</button>
+          </div>
         </header>
+
+        <section class="notification-panel hidden" id="notification-panel" aria-live="polite">
+          <div class="notification-head">
+            <div>
+              <p class="eyebrow">Avisos</p>
+              <h2>Notificaciones de estudio</h2>
+            </div>
+            <button class="small-button" id="browser-notifications" type="button">Activar alertas</button>
+          </div>
+          <div class="notification-list" id="notification-list"></div>
+        </section>
 
         <section class="view-section" id="view-dashboard">
           <section class="metrics-grid" aria-label="Metricas principales">
@@ -486,6 +503,15 @@
             <button class="icon-button" id="chatbot-close" type="button">x</button>
           </div>
           <div id="ai-recommendations" class="chatbot-messages"></div>
+          <div class="chatbot-suggestions" aria-label="Preguntas rapidas">
+            <button type="button" data-chat-prompt="Que hago primero?">Que hago primero?</button>
+            <button type="button" data-chat-prompt="Que vence esta semana?">Esta semana</button>
+            <button type="button" data-chat-prompt="Como voy?">Como voy?</button>
+          </div>
+          <form class="chatbot-form" id="chatbot-form">
+            <input id="chatbot-input" type="text" placeholder="Escribile a Hugo..." autocomplete="off" />
+            <button type="submit">Enviar</button>
+          </form>
         </div>
       </section>
     </div>

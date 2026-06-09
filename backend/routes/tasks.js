@@ -1,11 +1,42 @@
 const crypto = require("node:crypto");
 const express = require("express");
+const config = require("../config");
 const authenticate = require("../middleware/authenticate");
 const { pool } = require("../db");
 const { fromDatabaseTask } = require("../utils/taskMapper");
 const { normalizeTask } = require("../utils/validation");
 
 const router = express.Router();
+
+router.get("/due-reminders", async (req, res) => {
+  if (!isValidN8nRequest(req)) return res.status(401).json({ message: "No autorizado." });
+
+  const result = await pool.query(
+    `select tasks.id, tasks.title, tasks.subject, tasks.type, tasks.due_date, tasks.due_time, tasks.hours,
+            tasks.notes, tasks.checklist, tasks.difficulty, tasks.status, users.email
+     from tasks
+     join users on users.id = tasks.user_id
+     where tasks.status <> 'Terminada'
+       and tasks.due_date between current_date and current_date + interval '1 day'
+     order by tasks.due_date asc, tasks.difficulty desc, tasks.created_at asc`
+  );
+
+  res.json({
+    generatedAt: new Date().toISOString(),
+    reminders: result.rows.map((row) => {
+      const task = fromDatabaseTask(row);
+      return {
+        event: "task.due_reminder",
+        user: { email: row.email },
+        task,
+        reminder: {
+          label: getReminderLabel(task.dueDate),
+          dueInDays: getDueInDays(task.dueDate),
+        },
+      };
+    }),
+  });
+});
 
 router.use(authenticate);
 
@@ -33,7 +64,9 @@ router.post("/", async (req, res) => {
     [id, req.user.id, task.title, task.subject, task.type, task.dueDate, task.dueTime, task.hours, task.notes, JSON.stringify(task.checklist), task.difficulty, task.status]
   );
 
-  res.status(201).json(fromDatabaseTask(result.rows[0]));
+  const createdTask = fromDatabaseTask(result.rows[0]);
+
+  res.status(201).json(createdTask);
 });
 
 router.patch("/:id", async (req, res) => {
@@ -74,7 +107,10 @@ router.patch("/:id", async (req, res) => {
   );
 
   if (!result.rows[0]) return res.status(404).json({ message: "Tarea no encontrada." });
-  res.json(fromDatabaseTask(result.rows[0]));
+
+  const updatedTask = fromDatabaseTask(result.rows[0]);
+
+  res.json(updatedTask);
 });
 
 router.delete("/:id", async (req, res) => {
@@ -103,3 +139,22 @@ router.post("/demo", async (req, res) => {
 });
 
 module.exports = router;
+
+function getDueInDays(dueDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${dueDate}T00:00:00`);
+  return Math.round((due.getTime() - today.getTime()) / 86400000);
+}
+
+function getReminderLabel(dueDate) {
+  const dueInDays = getDueInDays(dueDate);
+  if (dueInDays === 0) return "Vence hoy";
+  if (dueInDays === 1) return "Vence mañana";
+  return "Proximo vencimiento";
+}
+
+function isValidN8nRequest(req) {
+  if (!config.n8nSharedSecret) return true;
+  return req.get("x-n8n-secret") === config.n8nSharedSecret;
+}

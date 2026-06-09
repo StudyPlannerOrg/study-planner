@@ -31,9 +31,16 @@ const authSubmit = document.querySelector("#auth-submit");
 const authSwitch = document.querySelector("#auth-switch");
 const signOutButton = document.querySelector("#sign-out");
 const storageStatus = document.querySelector("#storage-status");
+const notificationToggle = document.querySelector("#notification-toggle");
+const notificationPanel = document.querySelector("#notification-panel");
+const notificationCount = document.querySelector("#notification-count");
+const notificationList = document.querySelector("#notification-list");
+const browserNotifications = document.querySelector("#browser-notifications");
 const chatbotToggle = document.querySelector("#chatbot-toggle");
 const chatbotPanel = document.querySelector("#chatbot-panel");
 const chatbotClose = document.querySelector("#chatbot-close");
+const chatbotForm = document.querySelector("#chatbot-form");
+const chatbotInput = document.querySelector("#chatbot-input");
 const taskChecklist = document.querySelector("#task-checklist");
 const editChecklist = document.querySelector("#edit-checklist");
 const editChecklistProgress = document.querySelector("#edit-checklist-progress");
@@ -44,6 +51,7 @@ const dayModalAdd = document.querySelector("#day-modal-add");
 const dayModalClose = document.querySelector("#day-modal-close");
 
 const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
+const BROWSER_NOTIFICATION_KEY = "studyplanner.browserNotificationsSent";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
 const SESSION_ACTIVITY_EVENTS = ["click", "keydown", "mousemove", "scroll", "touchstart"];
 
@@ -59,6 +67,7 @@ let metricFilter = "all";
 let calendarMonth = new Date();
 let selectedCalendarDate = "";
 let modalMode = "day";
+let chatMessages = [];
 
 init();
 
@@ -93,10 +102,28 @@ mobileMenu.addEventListener("click", () => {
 
 chatbotToggle.addEventListener("click", () => {
   chatbotPanel.classList.toggle("hidden");
+  if (!chatbotPanel.classList.contains("hidden")) chatbotInput.focus();
 });
 
 chatbotClose.addEventListener("click", () => {
   chatbotPanel.classList.add("hidden");
+});
+
+notificationToggle.addEventListener("click", () => {
+  notificationPanel.classList.toggle("hidden");
+});
+
+browserNotifications.addEventListener("click", async () => {
+  await requestBrowserNotifications();
+});
+
+chatbotForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  sendHugoMessage(chatbotInput.value);
+});
+
+document.querySelectorAll("[data-chat-prompt]").forEach((button) => {
+  button.addEventListener("click", () => sendHugoMessage(button.dataset.chatPrompt));
 });
 
 form.addEventListener("submit", async (event) => {
@@ -126,6 +153,12 @@ editTaskForm.addEventListener("submit", async (event) => {
   if (!selectedTaskId) return;
 
   const changes = collectTaskForm(editTaskForm, editChecklist);
+  const currentTask = tasks.find((task) => task.id === selectedTaskId);
+
+  if (currentTask && changes.status !== currentTask.status) {
+    const confirmed = confirmAction(`Cambiar el estado de "${currentTask.title}" de ${currentTask.status} a ${changes.status}?`);
+    if (!confirmed) changes.status = currentTask.status;
+  }
 
   await updateTask(selectedTaskId, changes);
   render();
@@ -255,6 +288,13 @@ dayModalTasks.addEventListener("click", (event) => {
   openTaskDetail(button.dataset.modalTask);
 });
 
+notificationList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-notification-task]");
+  if (!button) return;
+  notificationPanel.classList.add("hidden");
+  openTaskDetail(button.dataset.notificationTask);
+});
+
 [calendarGrid, agendaCalendarGrid].forEach((grid) => {
   grid.addEventListener("click", (event) => {
     const taskButton = event.target.closest("[data-calendar-task]");
@@ -284,11 +324,13 @@ list.addEventListener("click", async (event) => {
     return;
   }
 
-  if (action === "progress" && confirmAction("Marcar esta tarea como en progreso?")) {
-    await updateTask(id, { status: "En progreso" });
-  }
-  if (action === "done" && confirmAction("Marcar esta tarea como terminada?")) {
-    await updateTask(id, { status: "Terminada" });
+  if (action === "status") {
+    const task = tasks.find((item) => item.id === id);
+    if (!task) return;
+    const nextStatus = getNextStatus(task.status);
+    if (confirmAction(`Cambiar el estado de "${task.title}" de ${task.status} a ${nextStatus}?`)) {
+      await updateTask(id, { status: nextStatus });
+    }
   }
   if (action === "delete" && confirmAction("Eliminar esta tarea? Esta accion no se puede deshacer.")) {
     await deleteTask(id);
@@ -592,7 +634,7 @@ function openDayModal(date) {
     ? dayTasks
         .map(
           (task) => `
-            <button class="modal-task ${getPriorityClass(task)}" type="button" data-modal-task="${task.id}">
+            <button class="modal-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-modal-task="${task.id}">
               <strong>${escapeHtml(task.title)}</strong>
               <span>${escapeHtml(task.type)} - ${task.status}</span>
             </button>
@@ -623,7 +665,7 @@ function openMetricModal(filter) {
         .slice(0, 6)
         .map(
           (task) => `
-            <button class="modal-task ${getPriorityClass(task)}" type="button" data-modal-task="${task.id}">
+            <button class="modal-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-modal-task="${task.id}">
               <strong>${escapeHtml(task.title)}</strong>
               <span>${formatDate(task.dueDate)} - ${task.status}</span>
             </button>
@@ -636,6 +678,155 @@ function openMetricModal(filter) {
 
 function closeDayModal() {
   dayModal.classList.add("hidden");
+}
+
+function buildNotifications() {
+  const active = tasks.filter((task) => task.status !== "Terminada");
+  const overdue = active.filter((task) => daysUntil(task.dueDate) < 0);
+  const today = active.filter((task) => daysUntil(task.dueDate) === 0);
+  const tomorrow = active.filter((task) => daysUntil(task.dueDate) === 1);
+  const urgent = active.filter((task) => calculatePriorityScore(task) >= 75 && daysUntil(task.dueDate) > 1);
+  const incompleteSteps = active.filter((task) => {
+    const progress = getChecklistProgress(task);
+    return progress.total && progress.percent < 100 && daysUntil(task.dueDate) <= 2;
+  });
+
+  return [
+    ...overdue.map((task) => ({
+      id: `overdue-${task.id}`,
+      tone: "danger",
+      title: `Vencio: ${task.title}`,
+      body: `${formatDate(task.dueDate)} - ${task.status}`,
+      taskId: task.id,
+    })),
+    ...today.map((task) => ({
+      id: `today-${task.id}`,
+      tone: "warning",
+      title: `Vence hoy: ${task.title}`,
+      body: `${task.type} - ${task.difficulty}`,
+      taskId: task.id,
+    })),
+    ...tomorrow.map((task) => ({
+      id: `tomorrow-${task.id}`,
+      tone: "info",
+      title: `Vence mañana: ${task.title}`,
+      body: `${task.type} - ${task.status}`,
+      taskId: task.id,
+    })),
+    ...urgent.slice(0, 3).map((task) => ({
+      id: `urgent-${task.id}`,
+      tone: "warning",
+      title: `Prioridad alta: ${task.title}`,
+      body: `${formatDate(task.dueDate)} - ${explainPriority(task)}`,
+      taskId: task.id,
+    })),
+    ...incompleteSteps.slice(0, 3).map((task) => {
+      const progress = getChecklistProgress(task);
+      return {
+        id: `steps-${task.id}`,
+        tone: "info",
+        title: `Subtareas pendientes: ${task.title}`,
+        body: `${progress.done}/${progress.total} pasos completos`,
+        taskId: task.id,
+      };
+    }),
+  ];
+}
+
+function renderNotifications() {
+  const notifications = buildNotifications();
+  notificationCount.textContent = String(notifications.length);
+  notificationCount.classList.toggle("empty", !notifications.length);
+
+  notificationList.innerHTML = notifications.length
+    ? notifications
+        .map(
+          (item) => `
+            <button class="notification-item ${item.tone}" type="button" data-notification-task="${item.taskId}">
+              <strong>${escapeHtml(item.title)}</strong>
+              <span>${escapeHtml(item.body)}</span>
+            </button>
+          `
+        )
+        .join("")
+    : `<div class="empty-state compact-empty">No hay avisos importantes por ahora.</div>`;
+}
+
+async function requestBrowserNotifications() {
+  if (!("Notification" in window)) {
+    browserNotifications.textContent = "No disponible";
+    return;
+  }
+
+  const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+  if (permission !== "granted") {
+    browserNotifications.textContent = "Permiso denegado";
+    return;
+  }
+
+  const sent = readJson(BROWSER_NOTIFICATION_KEY) || {};
+  const todayKey = normalizeDateValue(new Date());
+  const notifications = buildNotifications().filter((item) => item.tone !== "info").slice(0, 4);
+
+  notifications.forEach((item) => {
+    const sentKey = `${todayKey}-${item.id}`;
+    if (sent[sentKey]) return;
+    new Notification("Study Planner", { body: `${item.title}. ${item.body}` });
+    sent[sentKey] = true;
+  });
+
+  localStorage.setItem(BROWSER_NOTIFICATION_KEY, JSON.stringify(sent));
+  browserNotifications.textContent = notifications.length ? "Alertas activas" : "Sin alertas";
+}
+
+function sendHugoMessage(text) {
+  const message = String(text || "").trim();
+  if (!message) return;
+
+  chatMessages.push({ from: "user", text: message });
+  chatMessages.push({ from: "bot", text: buildHugoReply(message) });
+  chatMessages = chatMessages.slice(-10);
+  chatbotInput.value = "";
+  renderRecommendations();
+}
+
+function buildHugoReply(message) {
+  const normalized = message.toLowerCase();
+  const active = sortTasks(tasks.filter((task) => task.status !== "Terminada"));
+  const completed = tasks.filter((task) => task.status === "Terminada");
+  const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
+  const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
+
+  if (!tasks.length) return "Todavia no hay tareas cargadas. Crea una actividad y te ayudo a priorizarla.";
+
+  if (normalized.includes("hola") || normalized.includes("buen")) {
+    return `Hola. Tenes ${active.length} tareas activas y ${completed.length} terminadas. Puedo ayudarte con prioridades, vencimientos o progreso.`;
+  }
+
+  if (normalized.includes("primero") || normalized.includes("prioridad") || normalized.includes("urgente")) {
+    if (!active.length) return "No tenes tareas activas. Lo que aparece terminado queda tachado y al fondo.";
+    const task = active[0];
+    return `Yo empezaria por "${task.title}". Vence el ${formatDate(task.dueDate)}, dificultad ${task.difficulty}, progreso ${formatProgress(task)}. ${explainPriority(task)}`;
+  }
+
+  if (normalized.includes("semana") || normalized.includes("vence") || normalized.includes("fecha")) {
+    if (!week.length) return "No veo tareas activas que venzan esta semana.";
+    return `Esta semana tenes: ${week.slice(0, 4).map((task) => `"${task.title}" (${formatDate(task.dueDate)})`).join(", ")}.`;
+  }
+
+  if (normalized.includes("progreso") || normalized.includes("voy") || normalized.includes("avance")) {
+    const total = tasks.length;
+    const percent = total ? Math.round((completed.length / total) * 100) : 0;
+    return `Vas con ${completed.length}/${total} tareas terminadas (${percent}%). Pendientes: ${active.length}.`;
+  }
+
+  if (normalized.includes("plan") || normalized.includes("organiza") || normalized.includes("estudi")) {
+    if (!active.length) return "Tu agenda activa esta libre. Podrias revisar tareas terminadas o cargar la proxima entrega.";
+    return `Plan corto: 1) trabaja en "${active[0].title}", 2) revisa subtareas incompletas, 3) deja preparada la siguiente entrega: ${active[1] ? `"${active[1].title}"` : "no hay otra tarea activa"}.`;
+  }
+
+  if (urgent.length) return `Detecte ${urgent.length} tarea(s) urgente(s). La primera es "${urgent[0].title}", con entrega ${formatDate(urgent[0].dueDate)}.`;
+  return "Puedo responder sobre que hacer primero, que vence esta semana, como vas de progreso o ayudarte a armar un plan.";
 }
 
 async function loadCloudTasks() {
@@ -713,6 +904,7 @@ async function apiRequest(path, options = {}) {
 
 function render() {
   renderMetrics();
+  renderNotifications();
   renderCalendars();
   renderFocus();
   renderTasks(getFilteredTasks());
@@ -771,24 +963,30 @@ function renderCalendars() {
     const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
     const pending = dayTasks.filter((task) => task.status !== "Terminada").length;
     const done = dayTasks.length - pending;
-    const miniTask = dayTasks[0];
+    const taskDots = dayTasks.slice(0, 4);
 
     miniCells.push(`
       <button class="calendar-day ${isToday ? "today" : ""}" type="button" data-calendar-date="${dateKey}">
         <strong>${day}</strong>
-        ${miniTask ? `<span class="mini-task ${getPriorityClass(miniTask)}">${escapeHtml(miniTask.title)}</span>` : ""}
+        ${
+          taskDots.length
+            ? `<span class="mini-task-dots" aria-label="${dayTasks.length} tareas">${taskDots
+                .map((task) => `<i class="${getPriorityClass(task)} ${getTaskStateClass(task)}"></i>`)
+                .join("")}</span>`
+            : ""
+        }
       </button>
     `);
 
     agendaCells.push(`
-      <div class="calendar-day agenda-day ${isToday ? "today" : ""}" data-calendar-date="${dateKey}">
+      <div class="calendar-day agenda-day ${isToday ? "today" : ""} ${done && !pending ? "completed-day" : ""}" data-calendar-date="${dateKey}">
         <button class="day-number" type="button" data-calendar-date="${dateKey}">${day}</button>
         <div class="calendar-task-list">
           ${dayTasks
             .slice(0, 3)
             .map(
               (task) => `
-                <button class="calendar-task ${getPriorityClass(task)}" type="button" data-calendar-task="${task.id}">
+                <button class="calendar-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-calendar-task="${task.id}">
                   ${escapeHtml(task.title)}
                 </button>
               `
@@ -839,7 +1037,7 @@ function renderTasks(items) {
     .map((task) => {
       const priority = getPriorityClass(task);
       return `
-        <article class="task-card" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Ver o editar ${escapeHtml(task.title)}">
+        <article class="task-card ${getTaskStateClass(task)}" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Ver o editar ${escapeHtml(task.title)}">
           <div class="task-main">
             <div>
               <strong>${escapeHtml(task.title)}</strong>
@@ -854,11 +1052,9 @@ function renderTasks(items) {
           ${renderChecklistPreview(task)}
           <div class="task-actions">
             <span>Dificultad: ${task.difficulty}</span>
-            <span>Estado: ${task.status}</span>
-            <button class="small-button" data-action="progress" data-id="${task.id}">En progreso</button>
-            <button class="small-button" data-action="done" data-id="${task.id}">Terminada</button>
-            <button class="small-button danger-button" data-action="delete" data-id="${task.id}">Eliminar</button>
+            <button class="status-button" data-action="status" data-id="${task.id}">Estado: ${task.status}</button>
           </div>
+          <button class="small-button danger-button task-delete" data-action="delete" data-id="${task.id}">Eliminar</button>
         </article>
       `;
     })
@@ -866,6 +1062,20 @@ function renderTasks(items) {
 }
 
 function renderRecommendations() {
+  if (chatMessages.length) {
+    recommendations.innerHTML = chatMessages
+      .map(
+        (message) => `
+          <div class="chat-message ${message.from}">
+            <span>${escapeHtml(message.text)}</span>
+          </div>
+        `
+      )
+      .join("");
+    recommendations.scrollTop = recommendations.scrollHeight;
+    return;
+  }
+
   const active = tasks.filter((task) => task.status !== "Terminada");
   const ranked = active
     .map((task) => ({
@@ -877,7 +1087,7 @@ function renderRecommendations() {
     .slice(0, 3);
 
   if (!ranked.length) {
-    recommendations.innerHTML = `<div class="chat-message bot">Soy Hugo. Crea una tarea y te ayudo a priorizarla.</div>`;
+    recommendations.innerHTML = `<div class="chat-message bot"><span>Soy Hugo. Crea una tarea y te ayudo a priorizarla.</span></div>`;
     return;
   }
 
@@ -896,6 +1106,8 @@ function renderRecommendations() {
 
 function sortTasks(items) {
   return items.map(normalizeTaskDates).sort((a, b) => {
+    const byDone = compareCompleted(a, b);
+    if (byDone !== 0) return byDone;
     const byScore = calculatePriorityScore(b) - calculatePriorityScore(a);
     if (byScore !== 0) return byScore;
     return normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate));
@@ -919,15 +1131,15 @@ function sortForView(items) {
   const difficultyOrder = { Alta: 0, Media: 1, Baja: 2 };
 
   if (sortFilter.value === "dueDate") {
-    return sorted.sort((a, b) => normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate)));
+    return sorted.sort((a, b) => compareCompleted(a, b) || normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate)));
   }
 
   if (sortFilter.value === "difficulty") {
-    return sorted.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty] || calculatePriorityScore(b) - calculatePriorityScore(a));
+    return sorted.sort((a, b) => compareCompleted(a, b) || difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty] || calculatePriorityScore(b) - calculatePriorityScore(a));
   }
 
   if (sortFilter.value === "progress") {
-    return sorted.sort((a, b) => getChecklistProgress(b).percent - getChecklistProgress(a).percent || calculatePriorityScore(b) - calculatePriorityScore(a));
+    return sorted.sort((a, b) => compareCompleted(a, b) || getChecklistProgress(b).percent - getChecklistProgress(a).percent || calculatePriorityScore(b) - calculatePriorityScore(a));
   }
 
   return sortTasks(sorted);
@@ -946,6 +1158,20 @@ function getPriorityClass(task) {
   if (score >= 75) return "Urgente";
   if (score >= 45) return "Alta";
   return "Normal";
+}
+
+function getTaskStateClass(task) {
+  return task.status === "Terminada" ? "is-completed" : "";
+}
+
+function getNextStatus(status) {
+  if (status === "Pendiente") return "En progreso";
+  if (status === "En progreso") return "Terminada";
+  return "Pendiente";
+}
+
+function compareCompleted(a, b) {
+  return Number(a.status === "Terminada") - Number(b.status === "Terminada");
 }
 
 function formatProgress(task) {
