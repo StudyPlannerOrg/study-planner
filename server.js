@@ -17,7 +17,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const pool = databaseUrl
   ? new Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
+      ssl: isLocalDatabase(databaseUrl) ? false : { rejectUnauthorized: false },
     })
   : null;
 
@@ -232,6 +232,10 @@ function fromDatabaseTask(row) {
 
 function missingDatabase(res) {
   return res.status(503).json({ message: "DATABASE_URL no esta configurada." });
+}
+
+function isLocalDatabase(url) {
+  return url.includes("localhost") || url.includes("127.0.0.1") || url.includes("@postgres:");
 }
 
 function isValidEmail(email) {
