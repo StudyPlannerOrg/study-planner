@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Planner | Organizador academico</title>
+    <link rel="icon" type="image/png" href="assets/hugo-mascot.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <section class="public-page" id="landing-page">
+      <header class="public-nav">
+        <button class="brand brand-button" type="button" data-go-home>
+          <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
+          <span>
+            <strong>Study Planner</strong>
+            <small>Planner inteligente para estudiantes</small>
+          </span>
+        </button>
+        <nav class="public-links" aria-label="Navegacion publica">
+          <a href="#funciones">Funciones</a>
+          <a href="#experiencia">Experiencia</a>
+          <a href="#tecnologia">Tecnologia</a>
+        </nav>
+        <div class="public-actions">
+          <button class="ghost-button" type="button" data-auth-action="login">Ingresar</button>
+          <button type="button" data-auth-action="register">Crear cuenta</button>
+        </div>
+      </header>
+
+      <main class="public-main">
+        <section class="hero-section">
+          <div class="hero-copy">
+            <p class="eyebrow">Planner inteligente para estudiantes</p>
+            <h1>Converti entregas, parciales y pendientes en un plan claro</h1>
+            <p>
+              Study Planner organiza tu carga academica, detecta prioridades y te muestra el siguiente paso sin llenar tu dia de ruido.
+            </p>
+            <div class="hero-actions">
+              <button type="button" data-auth-action="register">Empezar ahora</button>
+              <button class="ghost-button" type="button" data-auth-action="login">Ya tengo cuenta</button>
+            </div>
+          </div>
+
+          <div class="interactive-preview" aria-label="Vista previa interactiva">
+            <div class="orbit-card orbit-one">
+              <span>Hoy</span>
+              <strong>3 tareas</strong>
+            </div>
+            <div class="orbit-card orbit-two">
+              <span>Foco</span>
+              <strong>TP Integrador</strong>
+            </div>
+            <div class="planner-board">
+              <div class="board-top">
+                <span></span>
+                <span></span>
+                <span></span>
+                <strong>Plan semanal</strong>
+              </div>
+              <div class="board-columns">
+                <article>
+                  <small>Urgente</small>
+                  <strong>Parcial SQL</strong>
+                  <div class="progress"><span style="width: 72%"></span></div>
+                </article>
+                <article>
+                  <small>En progreso</small>
+                  <strong>TP con IA</strong>
+                  <div class="progress"><span style="width: 88%"></span></div>
+                </article>
+                <article>
+                  <small>Luego</small>
+                  <strong>Resumen patrones</strong>
+                  <div class="progress"><span style="width: 38%"></span></div>
+                </article>
+              </div>
+              <div class="assistant-teaser">
+                <b>Hugo</b>
+                <p>Tu asistente virtual prioriza el TP con IA: vence pronto y tiene mayor carga horaria.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="landing-section feature-section" id="funciones">
+          <div class="landing-section-heading">
+            <p class="eyebrow">Funciones</p>
+            <h2>Todo lo que necesitas para decidir que estudiar primero</h2>
+            <p>Study Planner transforma pendientes sueltos en una agenda clara, priorizada y lista para usar cada dia.</p>
+          </div>
+
+          <div class="feature-strip">
+            <article>
+              <span>01</span>
+              <h3>Prioridad visible</h3>
+              <p>Ordena tareas por vencimiento, dificultad y horas estimadas para que no pierdas tiempo decidiendo.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Agenda accionable</h3>
+              <p>Ves materia, estado, fecha limite y esfuerzo en una sola tarjeta, sin depender de planillas externas.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Seguimiento simple</h3>
+              <p>Cambias de pendiente a en progreso o terminada con confirmacion, manteniendo el control de cada avance.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="landing-section experience-section" id="experiencia">
+          <div class="landing-section-heading">
+            <p class="eyebrow">Experiencia</p>
+            <h2>Un recorrido pensado para estudiantes con entregas reales</h2>
+            <p>La app evita que tengas que recordar todo. Entrar al panel ya te muestra donde conviene poner foco.</p>
+          </div>
+
+          <div class="experience-grid">
+            <article>
+              <strong>1</strong>
+              <h3>Cargas la tarea</h3>
+              <p>Materia, tipo, fecha, dificultad y horas estimadas. Lo suficiente para planificar sin burocracia.</p>
+            </article>
+            <article>
+              <strong>2</strong>
+              <h3>El panel te ordena</h3>
+              <p>El foco principal aparece primero, con metricas de urgencia y horas pendientes.</p>
+            </article>
+            <article>
+              <strong>3</strong>
+              <h3>Avanzas sin perder contexto</h3>
+              <p>Abres el detalle, editas cambios y actualizas estado sin salir del flujo de estudio.</p>
+            </article>
+            <article>
+              <strong>4</strong>
+              <h3>Recibes orientacion</h3>
+              <p>Hugo resume que conviene atender y por que, usando los datos de tus tareas.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="landing-section tech-section" id="tecnologia">
+          <div class="landing-section-heading">
+            <p class="eyebrow">Tecnologia</p>
+            <h2>Base solida para que tu plan no dependa del dispositivo</h2>
+            <p>La parte tecnica esta al servicio de la experiencia: acceso seguro, datos persistentes y despliegue online.</p>
+          </div>
+
+          <div class="tech-grid">
+            <article>
+              <span>Seguro</span>
+              <h3>Cuenta con inicio de sesion</h3>
+              <p>Registro e ingreso con token para separar la agenda de cada estudiante.</p>
+            </article>
+            <article>
+              <span>Persistente</span>
+              <h3>Tareas guardadas</h3>
+              <p>La informacion queda en base de datos y vuelve a aparecer al iniciar sesion.</p>
+            </article>
+            <article>
+              <span>Online</span>
+              <h3>Preparado para deploy</h3>
+              <p>Arquitectura lista para Render y Neon, con Docker para ejecutar localmente.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="public-footer">
+        <span>Study Planner</span>
+        <span>Copyright 2026. Todos los derechos reservados.</span>
+      </footer>
+    </section>
+
+    <section class="auth-page hidden" id="auth-page">
+      <button class="brand brand-button" type="button" data-go-home>
+        <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
+        <span>
+          <strong>Study Planner</strong>
+          <small>Volver al inicio</small>
+        </span>
+      </button>
+
+      <div class="auth-layout">
+        <div class="auth-copy-panel">
+          <p class="eyebrow">Acceso</p>
+          <h1 id="auth-title">Ingresa a tu planner</h1>
+          <p id="auth-copy">Ingresa con tu cuenta para continuar al panel.</p>
+        </div>
+        <form class="auth-form" id="auth-form">
+          <label>
+            Email
+            <input name="email" type="email" placeholder="tu-email@ejemplo.com" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <input name="password" type="password" placeholder="Minimo 6 caracteres" minlength="6" autocomplete="current-password" required />
+          </label>
+          <button type="submit" id="auth-submit">Ingresar</button>
+          <button class="ghost-button" type="button" id="auth-switch">Crear cuenta</button>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell hidden" id="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <div class="brand">
+            <img class="brand-logo" src="assets/hugo-mascot.png" alt="Hugo, buho de Study Planner" />
+            <span>
+              <strong>Study Planner</strong>
+              <small>Agenda academica</small>
+            </span>
+          </div>
+          <button class="icon-button" id="sidebar-toggle" type="button" aria-label="Cerrar menu">&lsaquo;</button>
+        </div>
+
+        <nav class="nav-list" aria-label="Navegacion principal">
+          <button class="active" type="button" data-view="dashboard" data-short="P">Panel</button>
+          <button type="button" data-view="task" data-short="+">Nueva tarea</button>
+          <button type="button" data-view="agenda" data-short="A">Agenda</button>
+        </nav>
+
+        <div class="sidebar-note">
+          <span>Estado</span>
+          <strong id="storage-status">Modo local activo</strong>
+        </div>
+      </aside>
+
+      <main class="private-main">
+        <header class="topbar" id="dashboard">
+          <button class="icon-button menu-button" id="mobile-menu" type="button" aria-label="Abrir menu">&#9776;</button>
+          <div>
+            <p class="eyebrow">Panel de trabajo</p>
+            <h1>Hola, organicemos lo importante</h1>
+          </div>
+          <button class="ghost-button" id="sign-out" type="button">Cerrar sesion</button>
+        </header>
+
+        <section class="view-section" id="view-dashboard">
+          <section class="metrics-grid" aria-label="Metricas principales">
+            <article>
+              <span>Tareas activas</span>
+              <strong id="metric-total">0</strong>
+            </article>
+            <article>
+              <span>Urgentes</span>
+              <strong id="metric-urgent">0</strong>
+            </article>
+            <article>
+              <span>Vencen esta semana</span>
+              <strong id="metric-week">0</strong>
+            </article>
+            <article>
+              <span>Horas pendientes</span>
+              <strong id="metric-hours">0 h</strong>
+            </article>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel focus-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Prioridad</p>
+                <h2>Proximo foco</h2>
+              </div>
+              <div id="focus-list" class="focus-list"></div>
+            </article>
+            <article class="panel action-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Acciones rapidas</p>
+                <h2>Que queres hacer?</h2>
+              </div>
+              <button type="button" data-view="task">Crear nueva tarea</button>
+              <button class="ghost-button" type="button" data-view="agenda">Ver agenda completa</button>
+            </article>
+          </section>
+        </section>
+
+        <section class="view-section hidden" id="view-task">
+          <form class="panel task-page-form" id="task-form">
+            <div class="section-heading" id="nueva-tarea">
+              <p class="eyebrow">Nueva tarea</p>
+              <h2>Carga una actividad academica</h2>
+            </div>
+
+            <label>
+              Titulo
+              <input name="title" type="text" placeholder="Ej: TP Integrador de Gestion" required />
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Materia
+                <select name="subject" required>
+                  <option value="">Seleccionar</option>
+                  <option>Gestion de Desarrollo de Software</option>
+                  <option>Arquitectura de Software</option>
+                  <option>Base de Datos</option>
+                  <option>Programacion</option>
+                  <option>Ingles Tecnico</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <select name="type" required>
+                  <option value="">Seleccionar</option>
+                  <option>Trabajo practico</option>
+                  <option>Parcial</option>
+                  <option>Final</option>
+                  <option>Lectura</option>
+                  <option>Exposicion</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="two-columns">
+              <label>
+                Fecha limite
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                Horas estimadas
+                <input name="hours" type="number" min="1" max="80" value="2" required />
+              </label>
+            </div>
+
+            <label>
+              Descripcion
+              <textarea name="notes" rows="4" placeholder="Describe que hay que entregar, estudiar o preparar" required></textarea>
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Dificultad
+                <select name="difficulty" required>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
+              </label>
+              <label>
+                Estado
+                <select name="status" required>
+                  <option>Pendiente</option>
+                  <option>En progreso</option>
+                </select>
+              </label>
+            </div>
+
+            <button type="submit">Guardar tarea</button>
+          </form>
+        </section>
+
+        <section class="view-section hidden" id="view-agenda">
+          <section class="panel agenda-panel" id="agenda">
+            <div class="section-heading">
+              <p class="eyebrow">Plan de estudio</p>
+              <h2>Agenda completa</h2>
+            </div>
+
+            <div class="filters">
+              <input id="search" type="search" placeholder="Buscar tarea, materia o descripcion" />
+              <select id="difficulty-filter" aria-label="Filtrar por dificultad">
+                <option value="Todas">Todas</option>
+                <option>Alta</option>
+                <option>Media</option>
+                <option>Baja</option>
+              </select>
+            </div>
+
+            <div class="task-list" id="task-list" aria-live="polite"></div>
+          </section>
+        </section>
+
+        <section class="view-section hidden" id="view-detail">
+          <form class="panel task-page-form" id="edit-task-form">
+            <div class="section-heading">
+              <p class="eyebrow">Detalle de tarea</p>
+              <h2>Ver y editar actividad</h2>
+            </div>
+
+            <label>
+              Titulo
+              <input name="title" type="text" required />
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Materia
+                <select name="subject" required>
+                  <option>Gestion de Desarrollo de Software</option>
+                  <option>Arquitectura de Software</option>
+                  <option>Base de Datos</option>
+                  <option>Programacion</option>
+                  <option>Ingles Tecnico</option>
+                </select>
+              </label>
+              <label>
+                Tipo
+                <select name="type" required>
+                  <option>Trabajo practico</option>
+                  <option>Parcial</option>
+                  <option>Final</option>
+                  <option>Lectura</option>
+                  <option>Exposicion</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="two-columns">
+              <label>
+                Fecha limite
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                Horas estimadas
+                <input name="hours" type="number" min="1" max="80" required />
+              </label>
+            </div>
+
+            <label>
+              Descripcion
+              <textarea name="notes" rows="4" required></textarea>
+            </label>
+
+            <div class="two-columns">
+              <label>
+                Dificultad
+                <select name="difficulty" required>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
+              </label>
+              <label>
+                Estado
+                <select name="status" required>
+                  <option>Pendiente</option>
+                  <option>En progreso</option>
+                  <option>Terminada</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit">Guardar cambios</button>
+              <button class="ghost-button" type="button" data-view="agenda">Volver a agenda</button>
+            </div>
+          </form>
+        </section>
+      </main>
+
+      <section class="chatbot" id="chatbot">
+        <button class="chatbot-button" id="chatbot-toggle" type="button">
+          <img src="assets/hugo-mascot.png" alt="" />
+          <span>Hugo</span>
+        </button>
+        <div class="chatbot-panel hidden" id="chatbot-panel">
+          <div class="chatbot-head">
+            <img src="assets/hugo-mascot.png" alt="" />
+            <strong>Hugo, asistente virtual</strong>
+            <button class="icon-button" id="chatbot-close" type="button">x</button>
+          </div>
+          <div id="ai-recommendations" class="chatbot-messages"></div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

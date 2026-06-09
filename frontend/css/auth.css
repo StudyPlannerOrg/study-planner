@@ -1,0 +1,38 @@
+﻿.auth-page {
+  align-content: start;
+  align-items: center;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(37, 99, 235, 0.16), transparent 28rem),
+    radial-gradient(circle at 84% 72%, rgba(235, 161, 42, 0.18), transparent 26rem),
+    var(--bg);
+  display: grid;
+  gap: 2rem;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.auth-layout {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.8fr);
+  margin: clamp(2rem, 8vh, 5rem) auto 0;
+  max-width: 980px;
+  padding: 1.5rem;
+  width: 100%;
+}
+
+.auth-copy-panel {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.auth-copy-panel p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+

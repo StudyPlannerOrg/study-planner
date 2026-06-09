@@ -5,7 +5,7 @@ npm-debug.log
 !.env.example
 .git
 .github
-agent-output
+docs/reports
 coverage
 dist
 build
