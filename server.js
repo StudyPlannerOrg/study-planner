@@ -17,7 +17,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const pool = databaseUrl
   ? new Pool({
       connectionString: databaseUrl,
-      ssl: databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
+      ssl: isLocalDatabase(databaseUrl) ? false : { rejectUnauthorized: false },
     })
   : null;
 
@@ -222,7 +222,7 @@ function fromDatabaseTask(row) {
     title: row.title,
     subject: row.subject,
     type: row.type,
-    dueDate: String(row.due_date).slice(0, 10),
+    dueDate: formatDatabaseDate(row.due_date),
     hours: row.hours,
     notes: row.notes,
     difficulty: row.difficulty,
@@ -240,4 +240,18 @@ function isValidEmail(email) {
 
 function isValidPassword(password) {
   return String(password || "").length >= 6;
+}
+
+function isLocalDatabase(url) {
+  return url.includes("localhost") || url.includes("127.0.0.1") || url.includes("@postgres:");
+}
+
+function formatDatabaseDate(value) {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  return date.toISOString().slice(0, 10);
 }
