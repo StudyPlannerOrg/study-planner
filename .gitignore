@@ -1,4 +1,4 @@
-agent-output/
+docs/reports/
 node_modules/
 .env
 .env.*

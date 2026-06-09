@@ -27,4 +27,4 @@ jobs:
         if: always()
         with:
           name: study-planner-agent-review
-          path: agent-output/review.md
+          path: docs/reports/agent-review.md
