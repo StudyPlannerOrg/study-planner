@@ -203,16 +203,11 @@ async function init() {
 
   if (isCloudMode()) {
     await loadCloudTasks();
-    if (isCloudMode()) {
-      showApp();
-      render();
-    } else {
-      loadLocalMode();
-    }
   } else {
-    loadLocalMode();
+    tasks = loadLocalTasks();
   }
 
+  showLanding();
   updateSessionUi();
 }
 
