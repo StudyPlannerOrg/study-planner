@@ -42,9 +42,7 @@ export function explainPriority(task) {
   const breakdown = getPriorityBreakdown(task);
   const score = breakdown.score;
   const dueText = days < 0 ? "ya esta vencida" : days === 0 ? "vence hoy" : `vence en ${days} dia(s)`;
-  const effortText = breakdown.usesEstimatedEffort
-    ? `esfuerzo sugerido de ${breakdown.estimatedHours} h`
-    : `${task.hours} hora(s) estimadas`;
+  const effortText = getEffortText(task, breakdown);
 
   if (score >= 75) {
     return `Prioridad maxima: ${dueText}, dificultad ${task.difficulty.toLowerCase()} y ${effortText}.`;
@@ -55,13 +53,6 @@ export function explainPriority(task) {
   }
 
   return `Puede planificarse despues de las tareas criticas: ${dueText}.`;
-}
-
-export function explainScore(task) {
-  const breakdown = getPriorityBreakdown(task);
-  const parts = breakdown.parts;
-  const effortLabel = breakdown.usesEstimatedEffort ? "esfuerzo estimado" : "esfuerzo";
-  return `${breakdown.score}/100 = fecha ${parts.fecha} + dificultad ${parts.dificultad} + tipo ${parts.tipo} + ${effortLabel} ${parts.esfuerzo} ${parts.avance < 0 ? `- avance ${Math.abs(parts.avance)}` : ""}`.trim();
 }
 
 function getUrgencyPoints(days) {
@@ -93,4 +84,12 @@ function getEffectiveHours(task) {
   };
 
   return Math.max(byDifficulty[task.difficulty] || 3, byType[task.type] || 3);
+}
+
+function getEffortText(task, breakdown) {
+  if (breakdown.usesEstimatedEffort) return "tamano estimado automaticamente";
+  const hours = Number(task.hours);
+  if (hours >= 8) return "tamano grande";
+  if (hours >= 5) return "tamano medio";
+  return "tamano chico";
 }

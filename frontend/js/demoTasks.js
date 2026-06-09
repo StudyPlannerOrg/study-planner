@@ -4,7 +4,7 @@ export const demoTasks = [
   {
     id: crypto.randomUUID(),
     title: "TP Integrador con IA",
-    subject: "Gestion de Desarrollo de Software",
+    subject: "",
     type: "Trabajo practico",
     dueDate: todayOffset(2),
     hours: 8,
@@ -20,7 +20,7 @@ export const demoTasks = [
   {
     id: crypto.randomUUID(),
     title: "Resumen de teorias del aprendizaje",
-    subject: "Psicologia",
+    subject: "",
     type: "Lectura",
     dueDate: todayOffset(5),
     hours: null,
@@ -35,7 +35,7 @@ export const demoTasks = [
   {
     id: crypto.randomUUID(),
     title: "Parcial SQL",
-    subject: "Base de Datos",
+    subject: "",
     type: "Parcial",
     dueDate: todayOffset(1),
     hours: 6,

@@ -94,12 +94,12 @@
             <article>
               <span>01</span>
               <h3>Prioridad visible</h3>
-              <p>Ordena tareas por vencimiento, dificultad y horas estimadas para que no pierdas tiempo decidiendo.</p>
+              <p>Ordena tareas por vencimiento, dificultad y tamano para que no pierdas tiempo decidiendo.</p>
             </article>
             <article>
               <span>02</span>
               <h3>Agenda accionable</h3>
-              <p>Ves materia, estado, fecha limite y esfuerzo en una sola tarjeta, sin depender de planillas externas.</p>
+              <p>Ves estado, fecha limite, avance y pasos pendientes en una sola tarjeta, sin depender de planillas externas.</p>
             </article>
             <article>
               <span>03</span>
@@ -120,12 +120,12 @@
             <article>
               <strong>1</strong>
               <h3>Cargas la tarea</h3>
-              <p>Materia, tipo, fecha, dificultad y horas estimadas. Lo suficiente para planificar sin burocracia.</p>
+              <p>Titulo, tipo, fecha, dificultad y pasos. Lo suficiente para planificar sin burocracia.</p>
             </article>
             <article>
               <strong>2</strong>
               <h3>El panel te ordena</h3>
-              <p>El foco principal aparece primero, con metricas de urgencia y horas pendientes.</p>
+              <p>El foco principal aparece primero, con metricas de urgencia y pendientes.</p>
             </article>
             <article>
               <strong>3</strong>
@@ -240,32 +240,25 @@
 
         <section class="view-section" id="view-dashboard">
           <section class="metrics-grid" aria-label="Metricas principales">
-            <article>
+            <button class="metric-card" type="button" data-metric-filter="active">
               <span>Tareas activas</span>
               <strong id="metric-total">0</strong>
-            </article>
-            <article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="urgent">
               <span>Urgentes</span>
               <strong id="metric-urgent">0</strong>
-            </article>
-            <article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="week">
               <span>Vencen esta semana</span>
               <strong id="metric-week">0</strong>
-            </article>
-            <article>
-              <span>Horas pendientes</span>
-              <strong id="metric-hours">0 h</strong>
-            </article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="pending">
+              <span>Pendientes</span>
+              <strong id="metric-pending">0</strong>
+            </button>
           </section>
 
           <section class="dashboard-grid">
-            <article class="panel calendar-panel">
-              <div class="section-heading">
-                <p class="eyebrow">Calendario</p>
-                <h2 id="calendar-title">Este mes</h2>
-              </div>
-              <div class="calendar-grid" id="calendar-grid" aria-label="Calendario de tareas"></div>
-            </article>
             <article class="panel focus-panel">
               <div class="section-heading">
                 <p class="eyebrow">Prioridad</p>
@@ -280,6 +273,16 @@
               </div>
               <button type="button" data-view="task">Crear nueva tarea</button>
               <button class="ghost-button" type="button" data-view="agenda">Ver agenda completa</button>
+            </article>
+            <article class="panel calendar-panel mini-calendar-panel">
+              <div class="section-heading calendar-heading">
+                <div>
+                  <p class="eyebrow">Calendario</p>
+                  <h2 id="calendar-title">Este mes</h2>
+                </div>
+                <button class="small-button" type="button" data-view="agenda">Ir a agenda</button>
+              </div>
+              <div class="calendar-grid mini-calendar" id="calendar-grid" aria-label="Calendario resumido"></div>
             </article>
           </section>
         </section>
@@ -298,10 +301,6 @@
 
             <div class="two-columns">
               <label>
-                Area o materia
-                <input name="subject" type="text" list="subject-options" placeholder="Ej: Psicologia, Historia, Anatomia" />
-              </label>
-              <label>
                 Tipo
                 <select name="type" required>
                   <option value="">Seleccionar</option>
@@ -312,16 +311,29 @@
                   <option>Exposicion</option>
                 </select>
               </label>
-            </div>
-
-            <div class="two-columns">
               <label>
                 Fecha limite
                 <input name="dueDate" type="date" required />
               </label>
+            </div>
+
+            <div class="two-columns">
               <label>
-                Horas estimadas
-                <input name="hours" type="number" min="1" max="80" placeholder="Opcional" />
+                Tamaño estimado
+                <select name="hours">
+                  <option value="">No estoy seguro</option>
+                  <option value="2">Chica</option>
+                  <option value="5">Media</option>
+                  <option value="8">Grande</option>
+                </select>
+              </label>
+              <label>
+                Dificultad
+                <select name="difficulty" required>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
               </label>
             </div>
 
@@ -341,23 +353,7 @@
               <div class="checklist-items" id="task-checklist"></div>
             </section>
 
-            <div class="two-columns">
-              <label>
-                Dificultad
-                <select name="difficulty" required>
-                  <option>Baja</option>
-                  <option>Media</option>
-                  <option>Alta</option>
-                </select>
-              </label>
-              <label>
-                Estado
-                <select name="status" required>
-                  <option>Pendiente</option>
-                  <option>En progreso</option>
-                </select>
-              </label>
-            </div>
+            <input name="status" type="hidden" value="Pendiente" />
 
             <button type="submit">Guardar tarea</button>
           </form>
@@ -365,13 +361,22 @@
 
         <section class="view-section hidden" id="view-agenda">
           <section class="panel agenda-panel" id="agenda">
-            <div class="section-heading">
-              <p class="eyebrow">Plan de estudio</p>
-              <h2>Agenda completa</h2>
+            <div class="section-heading calendar-heading">
+              <div>
+                <p class="eyebrow">Plan de estudio</p>
+                <h2>Agenda completa</h2>
+              </div>
+              <div class="calendar-controls">
+                <button class="icon-button" id="calendar-prev" type="button" aria-label="Mes anterior">&lsaquo;</button>
+                <strong id="agenda-calendar-title">Este mes</strong>
+                <button class="icon-button" id="calendar-next" type="button" aria-label="Mes siguiente">&rsaquo;</button>
+              </div>
             </div>
 
+            <div class="calendar-grid agenda-calendar" id="agenda-calendar-grid" aria-label="Calendario completo"></div>
+
             <div class="filters">
-              <input id="search" type="search" placeholder="Buscar tarea, materia o descripcion" />
+              <input id="search" type="search" placeholder="Buscar tarea, descripcion o paso" />
               <select id="difficulty-filter" aria-label="Filtrar por dificultad">
                 <option value="Todas">Todas</option>
                 <option>Alta</option>
@@ -404,10 +409,6 @@
 
             <div class="two-columns">
               <label>
-                Area o materia
-                <input name="subject" type="text" list="subject-options" />
-              </label>
-              <label>
                 Tipo
                 <select name="type" required>
                   <option>Trabajo practico</option>
@@ -417,16 +418,29 @@
                   <option>Exposicion</option>
                 </select>
               </label>
-            </div>
-
-            <div class="two-columns">
               <label>
                 Fecha limite
                 <input name="dueDate" type="date" required />
               </label>
+            </div>
+
+            <div class="two-columns">
               <label>
-                Horas estimadas
-                <input name="hours" type="number" min="1" max="80" placeholder="Opcional" />
+                Tamaño estimado
+                <select name="hours">
+                  <option value="">No estoy seguro</option>
+                  <option value="2">Chica</option>
+                  <option value="5">Media</option>
+                  <option value="8">Grande</option>
+                </select>
+              </label>
+              <label>
+                Dificultad
+                <select name="difficulty" required>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
               </label>
             </div>
 
@@ -446,15 +460,7 @@
               <div class="checklist-items" id="edit-checklist"></div>
             </section>
 
-            <div class="two-columns">
-              <label>
-                Dificultad
-                <select name="difficulty" required>
-                  <option>Baja</option>
-                  <option>Media</option>
-                  <option>Alta</option>
-                </select>
-              </label>
+            <div class="two-columns single-column-mobile">
               <label>
                 Estado
                 <select name="status" required>
@@ -488,16 +494,6 @@
         </div>
       </section>
     </div>
-
-    <datalist id="subject-options">
-      <option value="Psicologia"></option>
-      <option value="Historia"></option>
-      <option value="Matematica"></option>
-      <option value="Anatomia"></option>
-      <option value="Derecho"></option>
-      <option value="Gestion de Desarrollo de Software"></option>
-      <option value="Base de Datos"></option>
-    </datalist>
 
     <script type="module" src="app.js"></script>
   </body>

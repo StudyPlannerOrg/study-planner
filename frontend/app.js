@@ -2,7 +2,7 @@ import { STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
 import { demoTasks } from "./js/demoTasks.js";
 import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
 import { escapeHtml, readJson } from "./js/helpers.js";
-import { calculatePriorityScore, explainPriority, explainScore } from "./js/priority.js";
+import { calculatePriorityScore, explainPriority } from "./js/priority.js";
 
 const landingPage = document.querySelector("#landing-page");
 const authPage = document.querySelector("#auth-page");
@@ -17,6 +17,10 @@ const focusList = document.querySelector("#focus-list");
 const recommendations = document.querySelector("#ai-recommendations");
 const calendarTitle = document.querySelector("#calendar-title");
 const calendarGrid = document.querySelector("#calendar-grid");
+const agendaCalendarTitle = document.querySelector("#agenda-calendar-title");
+const agendaCalendarGrid = document.querySelector("#agenda-calendar-grid");
+const calendarPrev = document.querySelector("#calendar-prev");
+const calendarNext = document.querySelector("#calendar-next");
 const search = document.querySelector("#search");
 const difficultyFilter = document.querySelector("#difficulty-filter");
 const sortFilter = document.querySelector("#sort-filter");
@@ -46,6 +50,8 @@ let authAction = "login";
 let activeView = "dashboard";
 let selectedTaskId = null;
 let sessionTimer = null;
+let metricFilter = "all";
+let calendarMonth = new Date();
 
 init();
 
@@ -154,6 +160,37 @@ search.addEventListener("input", render);
 difficultyFilter.addEventListener("change", render);
 sortFilter.addEventListener("change", render);
 
+document.querySelectorAll("[data-metric-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    metricFilter = button.dataset.metricFilter;
+    setView("agenda");
+    render();
+  });
+});
+
+focusList.addEventListener("click", (event) => {
+  const item = event.target.closest(".focus-item[data-id]");
+  if (item) openTaskDetail(item.dataset.id);
+});
+
+focusList.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const item = event.target.closest(".focus-item[data-id]");
+  if (!item) return;
+  event.preventDefault();
+  openTaskDetail(item.dataset.id);
+});
+
+calendarPrev.addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+  render();
+});
+
+calendarNext.addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+  render();
+});
+
 document.querySelectorAll("[data-checklist-add]").forEach((button) => {
   button.addEventListener("click", () => {
     const target = button.dataset.checklistAdd === "edit" ? editChecklist : taskChecklist;
@@ -171,6 +208,22 @@ document.addEventListener("click", async (event) => {
 });
 
 editChecklist.addEventListener("change", updateEditChecklistProgress);
+
+[calendarGrid, agendaCalendarGrid].forEach((grid) => {
+  grid.addEventListener("click", (event) => {
+    const taskButton = event.target.closest("[data-calendar-task]");
+    if (taskButton) {
+      openTaskDetail(taskButton.dataset.calendarTask);
+      return;
+    }
+
+    const day = event.target.closest("[data-calendar-date]");
+    if (!day) return;
+    form.dueDate.value = day.dataset.calendarDate;
+    renderChecklistEditor(taskChecklist, []);
+    setView("task");
+  });
+});
 
 list.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
@@ -274,10 +327,9 @@ function openTaskDetail(id) {
 
   selectedTaskId = id;
   editTaskForm.title.value = task.title;
-  editTaskForm.subject.value = task.subject || "";
   editTaskForm.type.value = task.type;
   editTaskForm.dueDate.value = normalizeDateValue(task.dueDate);
-  editTaskForm.hours.value = task.hours || "";
+  editTaskForm.hours.value = getEffortValue(task.hours);
   editTaskForm.notes.value = task.notes || "";
   editTaskForm.difficulty.value = task.difficulty;
   editTaskForm.status.value = task.status;
@@ -406,7 +458,7 @@ function collectTaskForm(formElement, checklistElement) {
 
   return {
     title: data.get("title").trim(),
-    subject: String(data.get("subject") || "").trim(),
+    subject: "",
     type: data.get("type"),
     dueDate: data.get("dueDate"),
     hours: hours > 0 ? hours : null,
@@ -522,7 +574,7 @@ async function apiRequest(path, options = {}) {
 
 function render() {
   renderMetrics();
-  renderCalendar();
+  renderCalendars();
   renderFocus();
   renderTasks(getFilteredTasks());
   renderRecommendations();
@@ -535,8 +587,8 @@ function getFilteredTasks() {
   const filtered = tasks.filter((task) => {
     const matchesDifficulty = difficulty === "Todas" || task.difficulty === difficulty;
     const checklistText = (task.checklist || []).map((item) => item.text).join(" ");
-    const text = `${task.title} ${task.subject || ""} ${task.type} ${task.notes || ""} ${checklistText}`.toLowerCase();
-    return matchesDifficulty && text.includes(query);
+    const text = `${task.title} ${task.type} ${task.notes || ""} ${checklistText}`.toLowerCase();
+    return matchesDifficulty && matchesMetricFilter(task) && text.includes(query);
   });
 
   return sortForView(filtered);
@@ -546,47 +598,72 @@ function renderMetrics() {
   const active = tasks.filter((task) => task.status !== "Terminada");
   const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
   const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
-  const withHours = active.filter((task) => Number(task.hours) > 0);
-  const hours = withHours.reduce((total, task) => total + Number(task.hours), 0);
+  const pending = tasks.filter((task) => task.status === "Pendiente");
 
   document.querySelector("#metric-total").textContent = active.length;
   document.querySelector("#metric-urgent").textContent = urgent.length;
   document.querySelector("#metric-week").textContent = week.length;
-  document.querySelector("#metric-hours").textContent = withHours.length ? `${hours} h` : "Sin estimar";
+  document.querySelector("#metric-pending").textContent = pending.length;
 }
 
-function renderCalendar() {
+function renderCalendars() {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  const monthName = today.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const monthName = calendarMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const offset = (firstDay.getDay() + 6) % 7;
+  const title = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-  calendarTitle.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+  calendarTitle.textContent = title;
+  agendaCalendarTitle.textContent = title;
 
-  const cells = ["L", "M", "M", "J", "V", "S", "D"].map((day) => `<div class="calendar-weekday">${day}</div>`);
-  for (let i = 0; i < offset; i += 1) cells.push(`<div class="calendar-day muted-day"></div>`);
+  const miniCells = ["L", "M", "M", "J", "V", "S", "D"].map((day) => `<div class="calendar-weekday">${day}</div>`);
+  const agendaCells = [...miniCells];
+  for (let i = 0; i < offset; i += 1) {
+    miniCells.push(`<div class="calendar-day muted-day"></div>`);
+    agendaCells.push(`<div class="calendar-day muted-day"></div>`);
+  }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayTasks = tasks.filter((task) => normalizeDateValue(task.dueDate) === dateKey);
-    const done = dayTasks.filter((task) => task.status === "Terminada").length;
-    const pending = dayTasks.length - done;
-    const isToday = day === today.getDate();
-    cells.push(`
-      <div class="calendar-day ${isToday ? "today" : ""}">
+    const dayTasks = sortTasks(tasks.filter((task) => normalizeDateValue(task.dueDate) === dateKey));
+    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const pending = dayTasks.filter((task) => task.status !== "Terminada").length;
+    const done = dayTasks.length - pending;
+    const miniTask = dayTasks[0];
+
+    miniCells.push(`
+      <button class="calendar-day ${isToday ? "today" : ""}" type="button" data-calendar-date="${dateKey}">
         <strong>${day}</strong>
-        <div class="calendar-dots">
-          ${pending ? `<span class="dot pending" title="${pending} pendiente(s)"></span>` : ""}
-          ${done ? `<span class="dot done" title="${done} realizada(s)"></span>` : ""}
+        ${miniTask ? `<span class="mini-task ${getPriorityClass(miniTask)}">${escapeHtml(miniTask.title)}</span>` : ""}
+      </button>
+    `);
+
+    agendaCells.push(`
+      <div class="calendar-day agenda-day ${isToday ? "today" : ""}" data-calendar-date="${dateKey}">
+        <button class="day-number" type="button" data-calendar-date="${dateKey}">${day}</button>
+        <div class="calendar-task-list">
+          ${dayTasks
+            .slice(0, 3)
+            .map(
+              (task) => `
+                <button class="calendar-task ${getPriorityClass(task)}" type="button" data-calendar-task="${task.id}">
+                  ${escapeHtml(task.title)}
+                </button>
+              `
+            )
+            .join("")}
+          ${dayTasks.length > 3 ? `<span class="calendar-more">+${dayTasks.length - 3}</span>` : ""}
         </div>
+        ${(pending || done) ? `<small>${pending} pend. / ${done} hechas</small>` : ""}
       </div>
     `);
   }
 
-  calendarGrid.innerHTML = cells.join("");
+  calendarGrid.innerHTML = miniCells.join("");
+  agendaCalendarGrid.innerHTML = agendaCells.join("");
 }
 
 function renderFocus() {
@@ -599,14 +676,14 @@ function renderFocus() {
 
   focusList.innerHTML = active
     .map((task) => {
-      const score = calculatePriorityScore(task);
+      const priority = getPriorityClass(task);
       return `
-        <article class="focus-item">
+        <article class="focus-item" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Abrir ${escapeHtml(task.title)}">
           <div>
             <strong>${escapeHtml(task.title)}</strong>
             <span>${formatTaskSubtitle(task)}</span>
           </div>
-          <b title="${escapeHtml(explainScore(task))}">${score}/100</b>
+          <b>${formatProgress(task)}</b>
         </article>
       `;
     })
@@ -621,8 +698,7 @@ function renderTasks(items) {
 
   list.innerHTML = items
     .map((task) => {
-      const score = calculatePriorityScore(task);
-      const priority = score >= 75 ? "Urgente" : score >= 45 ? "Alta" : "Normal";
+      const priority = getPriorityClass(task);
       return `
         <article class="task-card" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Ver o editar ${escapeHtml(task.title)}">
           <div class="task-main">
@@ -630,16 +706,14 @@ function renderTasks(items) {
               <strong>${escapeHtml(task.title)}</strong>
               <div class="task-meta">
                 <span>${formatDate(task.dueDate)}</span>
-                ${task.subject ? `<span>${escapeHtml(task.subject)}</span>` : ""}
                 <span>${escapeHtml(task.type)}</span>
-                <span>${formatHours(task)}</span>
+                <span>${formatEffort(task)}</span>
               </div>
             </div>
             <span class="tag ${priority}">${priority}</span>
           </div>
           ${task.notes ? `<p>${escapeHtml(task.notes)}</p>` : ""}
           ${renderChecklistPreview(task)}
-          <div class="score-detail">${escapeHtml(explainScore(task))}</div>
           <div class="task-actions">
             <span>Dificultad: ${task.difficulty}</span>
             <span>Estado: ${task.status}</span>
@@ -671,11 +745,11 @@ function renderRecommendations() {
 
   recommendations.innerHTML = ranked
     .map(
-      ({ task, score, reason }) => `
+      ({ task, reason }) => `
         <div class="chat-message bot">
-          <strong>${escapeHtml(task.title)} - ${score}/100</strong>
+          <strong>${escapeHtml(task.title)}</strong>
           <span>${reason}</span>
-          <small>${escapeHtml(explainScore(task))}</small>
+          <small>Progreso: ${formatProgress(task)}</small>
         </div>
       `
     )
@@ -721,11 +795,46 @@ function sortForView(items) {
 }
 
 function formatTaskSubtitle(task) {
-  return [task.subject, formatDate(task.dueDate)].filter(Boolean).map(escapeHtml).join(" - ");
+  return [formatDate(task.dueDate), task.type].filter(Boolean).map(escapeHtml).join(" - ");
 }
 
-function formatHours(task) {
-  return Number(task.hours) > 0 ? `${task.hours} h` : "Sin estimar";
+function formatEffort(task) {
+  const hours = Number(task.hours);
+  if (hours >= 8) return "Tarea grande";
+  if (hours >= 5) return "Tarea media";
+  if (hours >= 1) return "Tarea chica";
+  return "Tamano sin definir";
+}
+
+function getEffortValue(hours) {
+  const parsed = Number(hours);
+  if (!parsed) return "";
+  if (parsed >= 7) return "8";
+  if (parsed >= 4) return "5";
+  return "2";
+}
+
+function getPriorityClass(task) {
+  const score = calculatePriorityScore(task);
+  if (score >= 75) return "Urgente";
+  if (score >= 45) return "Alta";
+  return "Normal";
+}
+
+function formatProgress(task) {
+  const progress = getChecklistProgress(task);
+  if (progress.total) return `${progress.percent}%`;
+  if (task.status === "Terminada") return "100%";
+  if (task.status === "En progreso") return "50%";
+  return "0%";
+}
+
+function matchesMetricFilter(task) {
+  if (metricFilter === "active") return task.status !== "Terminada";
+  if (metricFilter === "urgent") return task.status !== "Terminada" && calculatePriorityScore(task) >= 75;
+  if (metricFilter === "week") return task.status !== "Terminada" && daysUntil(task.dueDate) <= 7;
+  if (metricFilter === "pending") return task.status === "Pendiente";
+  return true;
 }
 
 function getChecklistProgress(task) {
