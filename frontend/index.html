@@ -94,12 +94,12 @@
             <article>
               <span>01</span>
               <h3>Prioridad visible</h3>
-              <p>Ordena tareas por vencimiento, dificultad y horas estimadas para que no pierdas tiempo decidiendo.</p>
+              <p>Ordena tareas por vencimiento, dificultad y urgencia para que no pierdas tiempo decidiendo.</p>
             </article>
             <article>
               <span>02</span>
               <h3>Agenda accionable</h3>
-              <p>Ves materia, estado, fecha limite y esfuerzo en una sola tarjeta, sin depender de planillas externas.</p>
+              <p>Ves estado, fecha limite, avance y pasos pendientes en una sola tarjeta, sin depender de planillas externas.</p>
             </article>
             <article>
               <span>03</span>
@@ -120,12 +120,12 @@
             <article>
               <strong>1</strong>
               <h3>Cargas la tarea</h3>
-              <p>Materia, tipo, fecha, dificultad y horas estimadas. Lo suficiente para planificar sin burocracia.</p>
+              <p>Titulo, tipo, fecha, dificultad y pasos. Lo suficiente para planificar sin burocracia.</p>
             </article>
             <article>
               <strong>2</strong>
               <h3>El panel te ordena</h3>
-              <p>El foco principal aparece primero, con metricas de urgencia y horas pendientes.</p>
+              <p>El foco principal aparece primero, con metricas de urgencia y pendientes.</p>
             </article>
             <article>
               <strong>3</strong>
@@ -213,11 +213,11 @@
               <small>Agenda academica</small>
             </span>
           </div>
-          <button class="icon-button" id="sidebar-toggle" type="button" aria-label="Cerrar menu">&lsaquo;</button>
+          <button class="icon-button" id="sidebar-toggle" type="button" aria-label="Contraer menu">☰</button>
         </div>
 
         <nav class="nav-list" aria-label="Navegacion principal">
-          <button class="active" type="button" data-view="dashboard" data-short="P">Panel</button>
+          <button class="active" type="button" data-view="dashboard" data-short="I">Inicio</button>
           <button type="button" data-view="task" data-short="+">Nueva tarea</button>
           <button type="button" data-view="agenda" data-short="A">Agenda</button>
         </nav>
@@ -235,27 +235,44 @@
             <p class="eyebrow">Panel de trabajo</p>
             <h1>Hola, organicemos lo importante</h1>
           </div>
-          <button class="ghost-button" id="sign-out" type="button">Cerrar sesion</button>
+          <div class="topbar-actions">
+            <button class="ghost-button notification-toggle" id="notification-toggle" type="button">
+              Notificaciones
+              <span id="notification-count">0</span>
+            </button>
+            <button class="ghost-button" id="sign-out" type="button">Cerrar sesion</button>
+          </div>
         </header>
+
+        <section class="notification-panel hidden" id="notification-panel" aria-live="polite">
+          <div class="notification-head">
+            <div>
+              <p class="eyebrow">Avisos</p>
+              <h2>Notificaciones de estudio</h2>
+            </div>
+            <button class="small-button" id="browser-notifications" type="button">Activar alertas</button>
+          </div>
+          <div class="notification-list" id="notification-list"></div>
+        </section>
 
         <section class="view-section" id="view-dashboard">
           <section class="metrics-grid" aria-label="Metricas principales">
-            <article>
+            <button class="metric-card" type="button" data-metric-filter="active">
               <span>Tareas activas</span>
               <strong id="metric-total">0</strong>
-            </article>
-            <article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="urgent">
               <span>Urgentes</span>
               <strong id="metric-urgent">0</strong>
-            </article>
-            <article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="week">
               <span>Vencen esta semana</span>
               <strong id="metric-week">0</strong>
-            </article>
-            <article>
-              <span>Horas pendientes</span>
-              <strong id="metric-hours">0 h</strong>
-            </article>
+            </button>
+            <button class="metric-card" type="button" data-metric-filter="pending">
+              <span>Pendientes</span>
+              <strong id="metric-pending">0</strong>
+            </button>
           </section>
 
           <section class="dashboard-grid">
@@ -274,11 +291,22 @@
               <button type="button" data-view="task">Crear nueva tarea</button>
               <button class="ghost-button" type="button" data-view="agenda">Ver agenda completa</button>
             </article>
+            <article class="panel calendar-panel mini-calendar-panel">
+              <div class="section-heading calendar-heading">
+                <div>
+                  <p class="eyebrow">Calendario</p>
+                  <h2 id="calendar-title">Este mes</h2>
+                </div>
+                <button class="small-button" type="button" data-view="agenda">Ir a agenda</button>
+              </div>
+              <div class="calendar-grid mini-calendar" id="calendar-grid" aria-label="Calendario resumido"></div>
+            </article>
           </section>
         </section>
 
         <section class="view-section hidden" id="view-task">
           <form class="panel task-page-form" id="task-form">
+            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading" id="nueva-tarea">
               <p class="eyebrow">Nueva tarea</p>
               <h2>Carga una actividad academica</h2>
@@ -291,16 +319,16 @@
 
             <div class="two-columns">
               <label>
-                Materia
-                <select name="subject" required>
-                  <option value="">Seleccionar</option>
-                  <option>Gestion de Desarrollo de Software</option>
-                  <option>Arquitectura de Software</option>
-                  <option>Base de Datos</option>
-                  <option>Programacion</option>
-                  <option>Ingles Tecnico</option>
-                </select>
+                Fecha limite
+                <input name="dueDate" type="date" required />
               </label>
+              <label>
+                Hora estimada de entrega
+                <input name="dueTime" type="time" />
+              </label>
+            </div>
+
+            <div class="two-columns">
               <label>
                 Tipo
                 <select name="type" required>
@@ -312,25 +340,6 @@
                   <option>Exposicion</option>
                 </select>
               </label>
-            </div>
-
-            <div class="two-columns">
-              <label>
-                Fecha limite
-                <input name="dueDate" type="date" required />
-              </label>
-              <label>
-                Horas estimadas
-                <input name="hours" type="number" min="1" max="80" value="2" required />
-              </label>
-            </div>
-
-            <label>
-              Descripcion
-              <textarea name="notes" rows="4" placeholder="Describe que hay que entregar, estudiar o preparar" required></textarea>
-            </label>
-
-            <div class="two-columns">
               <label>
                 Dificultad
                 <select name="difficulty" required>
@@ -339,33 +348,62 @@
                   <option>Alta</option>
                 </select>
               </label>
-              <label>
-                Estado
-                <select name="status" required>
-                  <option>Pendiente</option>
-                  <option>En progreso</option>
-                </select>
-              </label>
             </div>
 
-            <button type="submit">Guardar tarea</button>
+            <label>
+              Descripcion
+              <textarea name="notes" rows="4" placeholder="Opcional"></textarea>
+            </label>
+
+            <section class="checklist-editor" aria-label="Pasos de la tarea">
+              <div class="checklist-head">
+                <div>
+                  <strong>Subtareas</strong>
+                  <span>Opcional</span>
+                </div>
+                <button class="small-button" type="button" data-checklist-add="task">Agregar subtarea</button>
+              </div>
+              <div class="checklist-items" id="task-checklist"></div>
+            </section>
+
+            <input name="status" type="hidden" value="Pendiente" />
+
+            <div class="form-actions">
+              <button type="submit">Crear tarea</button>
+              <button class="ghost-button" type="button" data-cancel>Cancelar</button>
+            </div>
           </form>
         </section>
 
         <section class="view-section hidden" id="view-agenda">
           <section class="panel agenda-panel" id="agenda">
-            <div class="section-heading">
-              <p class="eyebrow">Plan de estudio</p>
-              <h2>Agenda completa</h2>
+            <div class="section-heading calendar-heading">
+              <div>
+                <p class="eyebrow">Plan de estudio</p>
+                <h2>Agenda completa</h2>
+              </div>
+              <div class="calendar-controls">
+                <button class="icon-button" id="calendar-prev" type="button" aria-label="Mes anterior">&lsaquo;</button>
+                <strong id="agenda-calendar-title">Este mes</strong>
+                <button class="icon-button" id="calendar-next" type="button" aria-label="Mes siguiente">&rsaquo;</button>
+              </div>
             </div>
 
+            <div class="calendar-grid agenda-calendar" id="agenda-calendar-grid" aria-label="Calendario completo"></div>
+
             <div class="filters">
-              <input id="search" type="search" placeholder="Buscar tarea, materia o descripcion" />
+              <input id="search" type="search" placeholder="Buscar tarea, descripcion o paso" />
               <select id="difficulty-filter" aria-label="Filtrar por dificultad">
                 <option value="Todas">Todas</option>
                 <option>Alta</option>
                 <option>Media</option>
                 <option>Baja</option>
+              </select>
+              <select id="sort-filter" aria-label="Ordenar tareas">
+                <option value="priority">Prioridad</option>
+                <option value="dueDate">Fecha limite</option>
+                <option value="difficulty">Dificultad</option>
+                <option value="progress">Progreso</option>
               </select>
             </div>
 
@@ -375,6 +413,7 @@
 
         <section class="view-section hidden" id="view-detail">
           <form class="panel task-page-form" id="edit-task-form">
+            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading">
               <p class="eyebrow">Detalle de tarea</p>
               <h2>Ver y editar actividad</h2>
@@ -387,15 +426,16 @@
 
             <div class="two-columns">
               <label>
-                Materia
-                <select name="subject" required>
-                  <option>Gestion de Desarrollo de Software</option>
-                  <option>Arquitectura de Software</option>
-                  <option>Base de Datos</option>
-                  <option>Programacion</option>
-                  <option>Ingles Tecnico</option>
-                </select>
+                Fecha limite
+                <input name="dueDate" type="date" required />
               </label>
+              <label>
+                Hora estimada de entrega
+                <input name="dueTime" type="time" />
+              </label>
+            </div>
+
+            <div class="two-columns">
               <label>
                 Tipo
                 <select name="type" required>
@@ -406,25 +446,6 @@
                   <option>Exposicion</option>
                 </select>
               </label>
-            </div>
-
-            <div class="two-columns">
-              <label>
-                Fecha limite
-                <input name="dueDate" type="date" required />
-              </label>
-              <label>
-                Horas estimadas
-                <input name="hours" type="number" min="1" max="80" required />
-              </label>
-            </div>
-
-            <label>
-              Descripcion
-              <textarea name="notes" rows="4" required></textarea>
-            </label>
-
-            <div class="two-columns">
               <label>
                 Dificultad
                 <select name="difficulty" required>
@@ -433,6 +454,25 @@
                   <option>Alta</option>
                 </select>
               </label>
+            </div>
+
+            <label>
+              Descripcion
+              <textarea name="notes" rows="4" placeholder="Opcional"></textarea>
+            </label>
+
+            <section class="checklist-editor" aria-label="Pasos de la tarea">
+              <div class="checklist-head">
+                <div>
+                  <strong>Subtareas</strong>
+                  <span id="edit-checklist-progress">0/0</span>
+                </div>
+                <button class="small-button" type="button" data-checklist-add="edit">Agregar subtarea</button>
+              </div>
+              <div class="checklist-items" id="edit-checklist"></div>
+            </section>
+
+            <div class="two-columns single-column-mobile">
               <label>
                 Estado
                 <select name="status" required>
@@ -444,8 +484,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit">Guardar cambios</button>
-              <button class="ghost-button" type="button" data-view="agenda">Volver a agenda</button>
+              <button type="submit">Guardar tarea</button>
+              <button class="ghost-button" type="button" data-cancel>Cancelar</button>
             </div>
           </form>
         </section>
@@ -463,8 +503,27 @@
             <button class="icon-button" id="chatbot-close" type="button">x</button>
           </div>
           <div id="ai-recommendations" class="chatbot-messages"></div>
+          <div class="chatbot-suggestions" aria-label="Preguntas rapidas">
+            <button type="button" data-chat-prompt="Que hago primero?">Que hago primero?</button>
+            <button type="button" data-chat-prompt="Que vence esta semana?">Esta semana</button>
+            <button type="button" data-chat-prompt="Como voy?">Como voy?</button>
+          </div>
+          <form class="chatbot-form" id="chatbot-form">
+            <input id="chatbot-input" type="text" placeholder="Escribile a Hugo..." autocomplete="off" />
+            <button type="submit">Enviar</button>
+          </form>
         </div>
       </section>
+    </div>
+
+    <div class="day-modal hidden" id="day-modal" role="dialog" aria-modal="true" aria-labelledby="day-modal-title">
+      <div class="day-modal-card">
+        <button class="icon-button modal-close" id="day-modal-close" type="button" aria-label="Cerrar">x</button>
+        <p class="eyebrow">Calendario</p>
+        <h2 id="day-modal-title">Dia seleccionado</h2>
+        <div id="day-modal-tasks" class="day-modal-tasks"></div>
+        <button type="button" id="day-modal-add">Agregar tarea en este dia</button>
+      </div>
     </div>
 
     <script type="module" src="app.js"></script>
