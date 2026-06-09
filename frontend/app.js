@@ -2,7 +2,7 @@ import { STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
 import { demoTasks } from "./js/demoTasks.js";
 import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
 import { escapeHtml, readJson } from "./js/helpers.js";
-import { calculatePriorityScore, explainPriority } from "./js/priority.js";
+import { calculatePriorityScore, explainPriority, explainScore } from "./js/priority.js";
 
 const landingPage = document.querySelector("#landing-page");
 const authPage = document.querySelector("#auth-page");
@@ -15,8 +15,11 @@ const editTaskForm = document.querySelector("#edit-task-form");
 const list = document.querySelector("#task-list");
 const focusList = document.querySelector("#focus-list");
 const recommendations = document.querySelector("#ai-recommendations");
+const calendarTitle = document.querySelector("#calendar-title");
+const calendarGrid = document.querySelector("#calendar-grid");
 const search = document.querySelector("#search");
 const difficultyFilter = document.querySelector("#difficulty-filter");
+const sortFilter = document.querySelector("#sort-filter");
 const authForm = document.querySelector("#auth-form");
 const authTitle = document.querySelector("#auth-title");
 const authCopy = document.querySelector("#auth-copy");
@@ -27,6 +30,9 @@ const storageStatus = document.querySelector("#storage-status");
 const chatbotToggle = document.querySelector("#chatbot-toggle");
 const chatbotPanel = document.querySelector("#chatbot-panel");
 const chatbotClose = document.querySelector("#chatbot-close");
+const taskChecklist = document.querySelector("#task-checklist");
+const editChecklist = document.querySelector("#edit-checklist");
+const editChecklistProgress = document.querySelector("#edit-checklist-progress");
 
 const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
@@ -78,17 +84,7 @@ chatbotClose.addEventListener("click", () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = new FormData(form);
-  const task = {
-    title: data.get("title").trim(),
-    subject: data.get("subject"),
-    type: data.get("type"),
-    dueDate: data.get("dueDate"),
-    hours: Number(data.get("hours")),
-    notes: data.get("notes").trim(),
-    difficulty: data.get("difficulty"),
-    status: data.get("status"),
-  };
+  const task = collectTaskForm(form, taskChecklist);
 
   if (isCloudMode()) {
     const created = await apiRequest("/api/tasks", {
@@ -102,8 +98,8 @@ form.addEventListener("submit", async (event) => {
   }
 
   form.reset();
-  form.hours.value = 2;
   form.dueDate.value = todayOffset(1);
+  renderChecklistEditor(taskChecklist, []);
   render();
   setView("dashboard");
 });
@@ -112,17 +108,7 @@ editTaskForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!selectedTaskId) return;
 
-  const data = new FormData(editTaskForm);
-  const changes = {
-    title: data.get("title").trim(),
-    subject: data.get("subject"),
-    type: data.get("type"),
-    dueDate: data.get("dueDate"),
-    hours: Number(data.get("hours")),
-    notes: data.get("notes").trim(),
-    difficulty: data.get("difficulty"),
-    status: data.get("status"),
-  };
+  const changes = collectTaskForm(editTaskForm, editChecklist);
 
   await updateTask(selectedTaskId, changes);
   render();
@@ -166,9 +152,28 @@ signOutButton.addEventListener("click", () => {
 
 search.addEventListener("input", render);
 difficultyFilter.addEventListener("change", render);
+sortFilter.addEventListener("change", render);
+
+document.querySelectorAll("[data-checklist-add]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = button.dataset.checklistAdd === "edit" ? editChecklist : taskChecklist;
+    addChecklistRow(target);
+    updateEditChecklistProgress();
+  });
+});
+
+document.addEventListener("click", async (event) => {
+  const removeButton = event.target.closest("button[data-checklist-remove]");
+  if (removeButton) {
+    removeButton.closest(".checklist-row")?.remove();
+    updateEditChecklistProgress();
+  }
+});
+
+editChecklist.addEventListener("change", updateEditChecklistProgress);
 
 list.addEventListener("click", async (event) => {
-  const button = event.target.closest("button[data-action]");
+  const button = event.target.closest("[data-action]");
   if (!button) {
     const card = event.target.closest(".task-card[data-id]");
     if (card) openTaskDetail(card.dataset.id);
@@ -176,6 +181,12 @@ list.addEventListener("click", async (event) => {
   }
 
   const { action, id } = button.dataset;
+  if (action === "toggle-check") {
+    await toggleChecklistItem(id, button.dataset.itemId, button.checked);
+    render();
+    return;
+  }
+
   if (action === "progress" && confirmAction("Marcar esta tarea como en progreso?")) {
     await updateTask(id, { status: "En progreso" });
   }
@@ -199,7 +210,7 @@ list.addEventListener("keydown", (event) => {
 
 async function init() {
   form.dueDate.value = todayOffset(1);
-  form.hours.value = 2;
+  renderChecklistEditor(taskChecklist, []);
   expireSessionIfNeeded();
   apiAvailable = await checkApiHealth();
 
@@ -263,13 +274,15 @@ function openTaskDetail(id) {
 
   selectedTaskId = id;
   editTaskForm.title.value = task.title;
-  editTaskForm.subject.value = task.subject;
+  editTaskForm.subject.value = task.subject || "";
   editTaskForm.type.value = task.type;
   editTaskForm.dueDate.value = normalizeDateValue(task.dueDate);
-  editTaskForm.hours.value = task.hours;
-  editTaskForm.notes.value = task.notes;
+  editTaskForm.hours.value = task.hours || "";
+  editTaskForm.notes.value = task.notes || "";
   editTaskForm.difficulty.value = task.difficulty;
   editTaskForm.status.value = task.status;
+  renderChecklistEditor(editChecklist, task.checklist || []);
+  updateEditChecklistProgress();
   setView("detail");
 }
 
@@ -387,9 +400,72 @@ function persistLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
+function collectTaskForm(formElement, checklistElement) {
+  const data = new FormData(formElement);
+  const hours = Number(data.get("hours"));
+
+  return {
+    title: data.get("title").trim(),
+    subject: String(data.get("subject") || "").trim(),
+    type: data.get("type"),
+    dueDate: data.get("dueDate"),
+    hours: hours > 0 ? hours : null,
+    notes: String(data.get("notes") || "").trim(),
+    checklist: readChecklist(checklistElement),
+    difficulty: data.get("difficulty"),
+    status: data.get("status"),
+  };
+}
+
+function addChecklistRow(container, item = {}) {
+  const row = document.createElement("div");
+  row.className = "checklist-row";
+  row.dataset.itemId = item.id || crypto.randomUUID();
+  row.innerHTML = `
+    <label class="checklist-toggle">
+      <input type="checkbox" ${item.done ? "checked" : ""} />
+      <span></span>
+    </label>
+    <input type="text" value="${escapeHtml(item.text || "")}" placeholder="Ej: leer consigna, buscar fuentes, resolver ejercicios" />
+    <button class="icon-button" type="button" data-checklist-remove aria-label="Quitar paso">x</button>
+  `;
+  container.appendChild(row);
+}
+
+function renderChecklistEditor(container, checklist) {
+  container.innerHTML = "";
+  checklist.forEach((item) => addChecklistRow(container, item));
+}
+
+function readChecklist(container) {
+  return [...container.querySelectorAll(".checklist-row")]
+    .map((row) => ({
+      id: row.dataset.itemId || crypto.randomUUID(),
+      text: row.querySelector('input[type="text"]').value.trim(),
+      done: row.querySelector('input[type="checkbox"]').checked,
+    }))
+    .filter((item) => item.text);
+}
+
+function updateEditChecklistProgress() {
+  const checklist = readChecklist(editChecklist);
+  const done = checklist.filter((item) => item.done).length;
+  editChecklistProgress.textContent = `${done}/${checklist.length}`;
+}
+
 async function loadCloudTasks() {
   const data = await apiRequest("/api/tasks");
   if (data) tasks = sortTasks(data.map(normalizeTaskDates));
+}
+
+async function toggleChecklistItem(taskId, itemId, done) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) return;
+
+  const checklist = (task.checklist || []).map((item) => (item.id === itemId ? { ...item, done } : item));
+  const allDone = checklist.length && checklist.every((item) => item.done);
+  const status = allDone ? "Terminada" : task.status === "Terminada" ? "En progreso" : task.status;
+  await updateTask(taskId, { checklist, status });
 }
 
 async function updateTask(id, changes) {
@@ -446,6 +522,7 @@ async function apiRequest(path, options = {}) {
 
 function render() {
   renderMetrics();
+  renderCalendar();
   renderFocus();
   renderTasks(getFilteredTasks());
   renderRecommendations();
@@ -455,27 +532,65 @@ function getFilteredTasks() {
   const query = search.value.trim().toLowerCase();
   const difficulty = difficultyFilter.value;
 
-  return tasks.filter((task) => {
+  const filtered = tasks.filter((task) => {
     const matchesDifficulty = difficulty === "Todas" || task.difficulty === difficulty;
-    const text = `${task.title} ${task.subject} ${task.type} ${task.notes}`.toLowerCase();
+    const checklistText = (task.checklist || []).map((item) => item.text).join(" ");
+    const text = `${task.title} ${task.subject || ""} ${task.type} ${task.notes || ""} ${checklistText}`.toLowerCase();
     return matchesDifficulty && text.includes(query);
   });
+
+  return sortForView(filtered);
 }
 
 function renderMetrics() {
   const active = tasks.filter((task) => task.status !== "Terminada");
   const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
   const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
-  const hours = active.reduce((total, task) => total + Number(task.hours), 0);
+  const withHours = active.filter((task) => Number(task.hours) > 0);
+  const hours = withHours.reduce((total, task) => total + Number(task.hours), 0);
 
   document.querySelector("#metric-total").textContent = active.length;
   document.querySelector("#metric-urgent").textContent = urgent.length;
   document.querySelector("#metric-week").textContent = week.length;
-  document.querySelector("#metric-hours").textContent = `${hours} h`;
+  document.querySelector("#metric-hours").textContent = withHours.length ? `${hours} h` : "Sin estimar";
+}
+
+function renderCalendar() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const monthName = today.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = (firstDay.getDay() + 6) % 7;
+
+  calendarTitle.textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+  const cells = ["L", "M", "M", "J", "V", "S", "D"].map((day) => `<div class="calendar-weekday">${day}</div>`);
+  for (let i = 0; i < offset; i += 1) cells.push(`<div class="calendar-day muted-day"></div>`);
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dayTasks = tasks.filter((task) => normalizeDateValue(task.dueDate) === dateKey);
+    const done = dayTasks.filter((task) => task.status === "Terminada").length;
+    const pending = dayTasks.length - done;
+    const isToday = day === today.getDate();
+    cells.push(`
+      <div class="calendar-day ${isToday ? "today" : ""}">
+        <strong>${day}</strong>
+        <div class="calendar-dots">
+          ${pending ? `<span class="dot pending" title="${pending} pendiente(s)"></span>` : ""}
+          ${done ? `<span class="dot done" title="${done} realizada(s)"></span>` : ""}
+        </div>
+      </div>
+    `);
+  }
+
+  calendarGrid.innerHTML = cells.join("");
 }
 
 function renderFocus() {
-  const active = tasks.filter((task) => task.status !== "Terminada").slice(0, 3);
+  const active = sortTasks(tasks.filter((task) => task.status !== "Terminada")).slice(0, 3);
 
   if (!active.length) {
     focusList.innerHTML = `<div class="empty-state">No hay tareas activas. Crea una para empezar.</div>`;
@@ -489,9 +604,9 @@ function renderFocus() {
         <article class="focus-item">
           <div>
             <strong>${escapeHtml(task.title)}</strong>
-            <span>${escapeHtml(task.subject)} - ${formatDate(task.dueDate)}</span>
+            <span>${formatTaskSubtitle(task)}</span>
           </div>
-          <b>${score}/100</b>
+          <b title="${escapeHtml(explainScore(task))}">${score}/100</b>
         </article>
       `;
     })
@@ -515,14 +630,16 @@ function renderTasks(items) {
               <strong>${escapeHtml(task.title)}</strong>
               <div class="task-meta">
                 <span>${formatDate(task.dueDate)}</span>
-                <span>${escapeHtml(task.subject)}</span>
+                ${task.subject ? `<span>${escapeHtml(task.subject)}</span>` : ""}
                 <span>${escapeHtml(task.type)}</span>
-                <span>${task.hours} h</span>
+                <span>${formatHours(task)}</span>
               </div>
             </div>
             <span class="tag ${priority}">${priority}</span>
           </div>
-          <p>${escapeHtml(task.notes)}</p>
+          ${task.notes ? `<p>${escapeHtml(task.notes)}</p>` : ""}
+          ${renderChecklistPreview(task)}
+          <div class="score-detail">${escapeHtml(explainScore(task))}</div>
           <div class="task-actions">
             <span>Dificultad: ${task.difficulty}</span>
             <span>Estado: ${task.status}</span>
@@ -558,6 +675,7 @@ function renderRecommendations() {
         <div class="chat-message bot">
           <strong>${escapeHtml(task.title)} - ${score}/100</strong>
           <span>${reason}</span>
+          <small>${escapeHtml(explainScore(task))}</small>
         </div>
       `
     )
@@ -576,5 +694,72 @@ function normalizeTaskDates(task) {
   return {
     ...task,
     dueDate: normalizeDateValue(task.dueDate),
+    hours: Number(task.hours) > 0 ? Number(task.hours) : null,
+    subject: task.subject || "",
+    notes: task.notes || "",
+    checklist: Array.isArray(task.checklist) ? task.checklist : [],
   };
+}
+
+function sortForView(items) {
+  const sorted = [...items];
+  const difficultyOrder = { Alta: 0, Media: 1, Baja: 2 };
+
+  if (sortFilter.value === "dueDate") {
+    return sorted.sort((a, b) => normalizeDateValue(a.dueDate).localeCompare(normalizeDateValue(b.dueDate)));
+  }
+
+  if (sortFilter.value === "difficulty") {
+    return sorted.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty] || calculatePriorityScore(b) - calculatePriorityScore(a));
+  }
+
+  if (sortFilter.value === "progress") {
+    return sorted.sort((a, b) => getChecklistProgress(b).percent - getChecklistProgress(a).percent || calculatePriorityScore(b) - calculatePriorityScore(a));
+  }
+
+  return sortTasks(sorted);
+}
+
+function formatTaskSubtitle(task) {
+  return [task.subject, formatDate(task.dueDate)].filter(Boolean).map(escapeHtml).join(" - ");
+}
+
+function formatHours(task) {
+  return Number(task.hours) > 0 ? `${task.hours} h` : "Sin estimar";
+}
+
+function getChecklistProgress(task) {
+  const checklist = task.checklist || [];
+  const done = checklist.filter((item) => item.done).length;
+  return {
+    done,
+    total: checklist.length,
+    percent: checklist.length ? Math.round((done / checklist.length) * 100) : 0,
+  };
+}
+
+function renderChecklistPreview(task) {
+  const checklist = task.checklist || [];
+  if (!checklist.length) return "";
+
+  const progress = getChecklistProgress(task);
+  return `
+    <div class="checklist-preview">
+      <div class="checklist-progress">
+        <span>Pasos ${progress.done}/${progress.total}</span>
+        <b style="width: ${progress.percent}%"></b>
+      </div>
+      ${checklist
+        .slice(0, 4)
+        .map(
+          (item) => `
+            <label class="task-check">
+              <input type="checkbox" data-action="toggle-check" data-id="${task.id}" data-item-id="${item.id}" ${item.done ? "checked" : ""} />
+              <span>${escapeHtml(item.text)}</span>
+            </label>
+          `
+        )
+        .join("")}
+    </div>
+  `;
 }

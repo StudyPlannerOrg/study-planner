@@ -160,6 +160,65 @@
   grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
 }
 
+.calendar-panel {
+  grid-column: 1 / -1;
+}
+
+.calendar-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-weekday {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.calendar-day {
+  align-content: space-between;
+  aspect-ratio: 1;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  min-height: 54px;
+  padding: 0.45rem;
+}
+
+.calendar-day.today {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 2px rgba(19, 114, 96, 0.12);
+}
+
+.muted-day {
+  background: transparent;
+  border-color: transparent;
+}
+
+.calendar-dots {
+  display: flex;
+  gap: 0.2rem;
+  min-height: 8px;
+}
+
+.dot {
+  border-radius: 999px;
+  display: block;
+  height: 8px;
+  width: 8px;
+}
+
+.dot.pending {
+  background: var(--urgent);
+}
+
+.dot.done {
+  background: var(--primary);
+}
+
 .panel {
   padding: 1.25rem;
 }
@@ -217,7 +276,14 @@ form {
 .filters {
   display: grid;
   gap: 0.75rem;
+}
+
+.two-columns {
   grid-template-columns: 1fr 1fr;
+}
+
+.filters {
+  grid-template-columns: minmax(0, 1.3fr) minmax(150px, 0.45fr) minmax(150px, 0.45fr);
 }
 
 .form-actions {
@@ -285,6 +351,103 @@ form {
 
 .task-card p {
   line-height: 1.45;
+}
+
+.score-detail {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.checklist-editor {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+}
+
+.checklist-head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.checklist-head span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 0.1rem;
+}
+
+.checklist-items {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.checklist-row {
+  align-items: center;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: 28px minmax(0, 1fr) 36px;
+}
+
+.checklist-row input[type="text"] {
+  margin-top: 0;
+}
+
+.checklist-toggle {
+  display: grid;
+  height: 28px;
+  place-items: center;
+}
+
+.checklist-toggle input,
+.task-check input {
+  accent-color: var(--primary);
+  margin: 0;
+  width: auto;
+}
+
+.checklist-preview {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.checklist-progress {
+  background: #edf3f0;
+  border-radius: 999px;
+  height: 22px;
+  overflow: hidden;
+  position: relative;
+}
+
+.checklist-progress span {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+  left: 0.7rem;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.checklist-progress b {
+  background: rgba(19, 114, 96, 0.22);
+  display: block;
+  height: 100%;
+}
+
+.task-check {
+  align-items: center;
+  color: var(--ink);
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.45rem;
 }
 
 .tag {
@@ -408,5 +571,10 @@ form {
 
 .chat-message span {
   color: var(--muted);
+}
+
+.chat-message small {
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 

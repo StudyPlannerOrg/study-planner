@@ -259,6 +259,13 @@
           </section>
 
           <section class="dashboard-grid">
+            <article class="panel calendar-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Calendario</p>
+                <h2 id="calendar-title">Este mes</h2>
+              </div>
+              <div class="calendar-grid" id="calendar-grid" aria-label="Calendario de tareas"></div>
+            </article>
             <article class="panel focus-panel">
               <div class="section-heading">
                 <p class="eyebrow">Prioridad</p>
@@ -291,15 +298,8 @@
 
             <div class="two-columns">
               <label>
-                Materia
-                <select name="subject" required>
-                  <option value="">Seleccionar</option>
-                  <option>Gestion de Desarrollo de Software</option>
-                  <option>Arquitectura de Software</option>
-                  <option>Base de Datos</option>
-                  <option>Programacion</option>
-                  <option>Ingles Tecnico</option>
-                </select>
+                Area o materia
+                <input name="subject" type="text" list="subject-options" placeholder="Ej: Psicologia, Historia, Anatomia" />
               </label>
               <label>
                 Tipo
@@ -321,14 +321,25 @@
               </label>
               <label>
                 Horas estimadas
-                <input name="hours" type="number" min="1" max="80" value="2" required />
+                <input name="hours" type="number" min="1" max="80" placeholder="Opcional" />
               </label>
             </div>
 
             <label>
               Descripcion
-              <textarea name="notes" rows="4" placeholder="Describe que hay que entregar, estudiar o preparar" required></textarea>
+              <textarea name="notes" rows="4" placeholder="Opcional"></textarea>
             </label>
+
+            <section class="checklist-editor" aria-label="Pasos de la tarea">
+              <div class="checklist-head">
+                <div>
+                  <strong>Pasos para completar</strong>
+                  <span>Opcional</span>
+                </div>
+                <button class="small-button" type="button" data-checklist-add="task">Agregar paso</button>
+              </div>
+              <div class="checklist-items" id="task-checklist"></div>
+            </section>
 
             <div class="two-columns">
               <label>
@@ -367,6 +378,12 @@
                 <option>Media</option>
                 <option>Baja</option>
               </select>
+              <select id="sort-filter" aria-label="Ordenar tareas">
+                <option value="priority">Prioridad</option>
+                <option value="dueDate">Fecha limite</option>
+                <option value="difficulty">Dificultad</option>
+                <option value="progress">Progreso</option>
+              </select>
             </div>
 
             <div class="task-list" id="task-list" aria-live="polite"></div>
@@ -387,14 +404,8 @@
 
             <div class="two-columns">
               <label>
-                Materia
-                <select name="subject" required>
-                  <option>Gestion de Desarrollo de Software</option>
-                  <option>Arquitectura de Software</option>
-                  <option>Base de Datos</option>
-                  <option>Programacion</option>
-                  <option>Ingles Tecnico</option>
-                </select>
+                Area o materia
+                <input name="subject" type="text" list="subject-options" />
               </label>
               <label>
                 Tipo
@@ -415,14 +426,25 @@
               </label>
               <label>
                 Horas estimadas
-                <input name="hours" type="number" min="1" max="80" required />
+                <input name="hours" type="number" min="1" max="80" placeholder="Opcional" />
               </label>
             </div>
 
             <label>
               Descripcion
-              <textarea name="notes" rows="4" required></textarea>
+              <textarea name="notes" rows="4" placeholder="Opcional"></textarea>
             </label>
+
+            <section class="checklist-editor" aria-label="Pasos de la tarea">
+              <div class="checklist-head">
+                <div>
+                  <strong>Pasos para completar</strong>
+                  <span id="edit-checklist-progress">0/0</span>
+                </div>
+                <button class="small-button" type="button" data-checklist-add="edit">Agregar paso</button>
+              </div>
+              <div class="checklist-items" id="edit-checklist"></div>
+            </section>
 
             <div class="two-columns">
               <label>
@@ -466,6 +488,16 @@
         </div>
       </section>
     </div>
+
+    <datalist id="subject-options">
+      <option value="Psicologia"></option>
+      <option value="Historia"></option>
+      <option value="Matematica"></option>
+      <option value="Anatomia"></option>
+      <option value="Derecho"></option>
+      <option value="Gestion de Desarrollo de Software"></option>
+      <option value="Base de Datos"></option>
+    </datalist>
 
     <script type="module" src="app.js"></script>
   </body>
