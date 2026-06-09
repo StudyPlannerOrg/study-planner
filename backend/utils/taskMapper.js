@@ -7,6 +7,7 @@ function fromDatabaseTask(row) {
     dueDate: formatDatabaseDate(row.due_date),
     hours: row.hours,
     notes: row.notes,
+    checklist: Array.isArray(row.checklist) ? row.checklist : [],
     difficulty: row.difficulty,
     status: row.status,
   };
