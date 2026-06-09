@@ -3,10 +3,7 @@ const { Pool } = require("pg");
 const config = require("./config");
 
 const pool = config.databaseUrl
-  ? new Pool({
-      connectionString: config.databaseUrl,
-      ssl: isLocalDatabase(config.databaseUrl) ? false : { rejectUnauthorized: false },
-    })
+  ? new Pool(createPoolOptions(config.databaseUrl))
   : null;
 
 async function initializeDatabase() {
@@ -17,6 +14,26 @@ async function initializeDatabase() {
 
 function isLocalDatabase(url) {
   return url.includes("localhost") || url.includes("127.0.0.1") || url.includes("@postgres:");
+}
+
+function createPoolOptions(databaseUrl) {
+  if (isLocalDatabase(databaseUrl)) {
+    return {
+      connectionString: databaseUrl,
+      ssl: false,
+    };
+  }
+
+  return {
+    connectionString: withoutSslMode(databaseUrl),
+    ssl: { rejectUnauthorized: false },
+  };
+}
+
+function withoutSslMode(databaseUrl) {
+  const parsed = new URL(databaseUrl);
+  parsed.searchParams.delete("sslmode");
+  return parsed.toString();
 }
 
 module.exports = {
