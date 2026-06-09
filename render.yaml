@@ -13,3 +13,49 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: N8N_SHARED_SECRET
+        sync: false
+
+  - type: web
+    name: study-planner-n8n
+    runtime: image
+    plan: free
+    image:
+      url: docker.n8n.io/n8nio/n8n:latest
+    envVars:
+      - key: N8N_PORT
+        value: 10000
+      - key: N8N_LISTEN_ADDRESS
+        value: 0.0.0.0
+      - key: N8N_PROTOCOL
+        value: https
+      - key: GENERIC_TIMEZONE
+        value: America/Argentina/Buenos_Aires
+      - key: TZ
+        value: America/Argentina/Buenos_Aires
+      - key: N8N_RUNNERS_ENABLED
+        value: true
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_SSL_ENABLED
+        value: true
+      - key: DB_POSTGRESDB_SCHEMA
+        value: public
+      - key: DB_POSTGRESDB_HOST
+        sync: false
+      - key: DB_POSTGRESDB_PORT
+        sync: false
+      - key: DB_POSTGRESDB_DATABASE
+        sync: false
+      - key: DB_POSTGRESDB_USER
+        sync: false
+      - key: DB_POSTGRESDB_PASSWORD
+        sync: false
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+      - key: N8N_HOST
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: N8N_EDITOR_BASE_URL
+        sync: false

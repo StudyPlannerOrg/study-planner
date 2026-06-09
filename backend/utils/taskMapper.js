@@ -5,8 +5,10 @@ function fromDatabaseTask(row) {
     subject: row.subject,
     type: row.type,
     dueDate: formatDatabaseDate(row.due_date),
+    dueTime: row.due_time || "",
     hours: row.hours,
     notes: row.notes,
+    checklist: Array.isArray(row.checklist) ? row.checklist : [],
     difficulty: row.difficulty,
     status: row.status,
   };
