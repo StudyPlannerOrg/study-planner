@@ -3,6 +3,7 @@ const cors = require("cors");
 const express = require("express");
 const config = require("./config");
 const { initializeDatabase, pool } = require("./db");
+const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/auth");
 const taskRoutes = require("./routes/tasks");
 
@@ -22,11 +23,20 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 
+app.use("/api", (_req, res) => {
+  res.status(404).json({ message: "Ruta API no encontrada." });
+});
+
 app.get("*", (_req, res) => {
   res.sendFile(path.join(config.publicDir, "index.html"));
 });
 
-start();
+app.use(errorHandler);
+
+start().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 
 async function start() {
   await initializeDatabase();
