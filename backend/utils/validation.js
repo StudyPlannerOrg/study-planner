@@ -14,6 +14,7 @@ function normalizeTask(task) {
     subject: String(task.subject || "").trim(),
     type: String(task.type || "").trim(),
     dueDate: String(task.dueDate || "").slice(0, 10),
+    dueTime: normalizeDueTime(task.dueTime),
     hours: normalizeHours(task.hours),
     notes: String(task.notes || "").trim(),
     checklist: normalizeChecklist(task.checklist),
@@ -32,6 +33,11 @@ function normalizeTask(task) {
   }
 
   return normalized;
+}
+
+function normalizeDueTime(dueTime) {
+  const value = String(dueTime || "").trim();
+  return /^\d{2}:\d{2}$/.test(value) ? value : "";
 }
 
 function normalizeHours(hours) {

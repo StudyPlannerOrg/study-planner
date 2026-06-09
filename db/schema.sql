@@ -12,6 +12,7 @@ create table if not exists tasks (
   subject text,
   type text not null,
   due_date date not null,
+  due_time text,
   hours integer check (hours is null or hours > 0),
   notes text,
   checklist jsonb not null default '[]'::jsonb,
@@ -24,6 +25,7 @@ alter table tasks alter column subject drop not null;
 alter table tasks alter column hours drop not null;
 alter table tasks alter column notes drop not null;
 alter table tasks add column if not exists checklist jsonb not null default '[]'::jsonb;
+alter table tasks add column if not exists due_time text;
 update tasks set checklist = '[]'::jsonb where checklist is null;
 
 create index if not exists idx_tasks_user_due_date on tasks (user_id, due_date);

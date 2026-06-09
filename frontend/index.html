@@ -94,7 +94,7 @@
             <article>
               <span>01</span>
               <h3>Prioridad visible</h3>
-              <p>Ordena tareas por vencimiento, dificultad y tamano para que no pierdas tiempo decidiendo.</p>
+              <p>Ordena tareas por vencimiento, dificultad y urgencia para que no pierdas tiempo decidiendo.</p>
             </article>
             <article>
               <span>02</span>
@@ -213,7 +213,7 @@
               <small>Agenda academica</small>
             </span>
           </div>
-          <button class="icon-button" id="sidebar-toggle" type="button" aria-label="Cerrar menu">&lsaquo;</button>
+          <button class="icon-button" id="sidebar-toggle" type="button" aria-label="Contraer menu">☰</button>
         </div>
 
         <nav class="nav-list" aria-label="Navegacion principal">
@@ -289,6 +289,7 @@
 
         <section class="view-section hidden" id="view-task">
           <form class="panel task-page-form" id="task-form">
+            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading" id="nueva-tarea">
               <p class="eyebrow">Nueva tarea</p>
               <h2>Carga una actividad academica</h2>
@@ -301,6 +302,17 @@
 
             <div class="two-columns">
               <label>
+                Fecha limite
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                Hora estimada de entrega
+                <input name="dueTime" type="time" />
+              </label>
+            </div>
+
+            <div class="two-columns">
+              <label>
                 Tipo
                 <select name="type" required>
                   <option value="">Seleccionar</option>
@@ -309,22 +321,6 @@
                   <option>Final</option>
                   <option>Lectura</option>
                   <option>Exposicion</option>
-                </select>
-              </label>
-              <label>
-                Fecha limite
-                <input name="dueDate" type="date" required />
-              </label>
-            </div>
-
-            <div class="two-columns">
-              <label>
-                Tamaño estimado
-                <select name="hours">
-                  <option value="">No estoy seguro</option>
-                  <option value="2">Chica</option>
-                  <option value="5">Media</option>
-                  <option value="8">Grande</option>
                 </select>
               </label>
               <label>
@@ -345,17 +341,20 @@
             <section class="checklist-editor" aria-label="Pasos de la tarea">
               <div class="checklist-head">
                 <div>
-                  <strong>Pasos para completar</strong>
+                  <strong>Subtareas</strong>
                   <span>Opcional</span>
                 </div>
-                <button class="small-button" type="button" data-checklist-add="task">Agregar paso</button>
+                <button class="small-button" type="button" data-checklist-add="task">Agregar subtarea</button>
               </div>
               <div class="checklist-items" id="task-checklist"></div>
             </section>
 
             <input name="status" type="hidden" value="Pendiente" />
 
-            <button type="submit">Guardar tarea</button>
+            <div class="form-actions">
+              <button type="submit">Crear tarea</button>
+              <button class="ghost-button" type="button" data-cancel>Cancelar</button>
+            </div>
           </form>
         </section>
 
@@ -397,6 +396,7 @@
 
         <section class="view-section hidden" id="view-detail">
           <form class="panel task-page-form" id="edit-task-form">
+            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading">
               <p class="eyebrow">Detalle de tarea</p>
               <h2>Ver y editar actividad</h2>
@@ -409,6 +409,17 @@
 
             <div class="two-columns">
               <label>
+                Fecha limite
+                <input name="dueDate" type="date" required />
+              </label>
+              <label>
+                Hora estimada de entrega
+                <input name="dueTime" type="time" />
+              </label>
+            </div>
+
+            <div class="two-columns">
+              <label>
                 Tipo
                 <select name="type" required>
                   <option>Trabajo practico</option>
@@ -416,22 +427,6 @@
                   <option>Final</option>
                   <option>Lectura</option>
                   <option>Exposicion</option>
-                </select>
-              </label>
-              <label>
-                Fecha limite
-                <input name="dueDate" type="date" required />
-              </label>
-            </div>
-
-            <div class="two-columns">
-              <label>
-                Tamaño estimado
-                <select name="hours">
-                  <option value="">No estoy seguro</option>
-                  <option value="2">Chica</option>
-                  <option value="5">Media</option>
-                  <option value="8">Grande</option>
                 </select>
               </label>
               <label>
@@ -452,10 +447,10 @@
             <section class="checklist-editor" aria-label="Pasos de la tarea">
               <div class="checklist-head">
                 <div>
-                  <strong>Pasos para completar</strong>
+                  <strong>Subtareas</strong>
                   <span id="edit-checklist-progress">0/0</span>
                 </div>
-                <button class="small-button" type="button" data-checklist-add="edit">Agregar paso</button>
+                <button class="small-button" type="button" data-checklist-add="edit">Agregar subtarea</button>
               </div>
               <div class="checklist-items" id="edit-checklist"></div>
             </section>
@@ -472,8 +467,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit">Guardar cambios</button>
-              <button class="ghost-button" type="button" data-view="agenda">Volver a agenda</button>
+              <button type="submit">Guardar tarea</button>
+              <button class="ghost-button" type="button" data-cancel>Cancelar</button>
             </div>
           </form>
         </section>
@@ -493,6 +488,16 @@
           <div id="ai-recommendations" class="chatbot-messages"></div>
         </div>
       </section>
+    </div>
+
+    <div class="day-modal hidden" id="day-modal" role="dialog" aria-modal="true" aria-labelledby="day-modal-title">
+      <div class="day-modal-card">
+        <button class="icon-button modal-close" id="day-modal-close" type="button" aria-label="Cerrar">x</button>
+        <p class="eyebrow">Calendario</p>
+        <h2 id="day-modal-title">Dia seleccionado</h2>
+        <div id="day-modal-tasks" class="day-modal-tasks"></div>
+        <button type="button" id="day-modal-add">Agregar tarea en este dia</button>
+      </div>
     </div>
 
     <script type="module" src="app.js"></script>

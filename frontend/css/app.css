@@ -84,24 +84,11 @@
 }
 
 .sidebar.collapsed .nav-list button {
-  align-items: center;
-  display: grid;
-  font-size: 0;
-  height: 48px;
-  justify-content: center;
-  padding: 0;
-  text-align: center;
-  width: 48px;
-}
-
-.sidebar.collapsed .nav-list button::before {
-  content: attr(data-short);
-  font-size: 1rem;
-  font-weight: 900;
+  display: none;
 }
 
 .sidebar.collapsed .icon-button {
-  transform: rotate(180deg);
+  transform: none;
 }
 
 .private-main {
@@ -168,15 +155,15 @@
 .dashboard-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr) minmax(260px, 0.45fr);
 }
 
 .calendar-panel {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 .mini-calendar-panel {
-  order: 3;
+  align-self: start;
 }
 
 .calendar-heading {
@@ -239,8 +226,22 @@ button.calendar-day:hover {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
+.mini-calendar {
+  gap: 0.25rem;
+}
+
+.mini-calendar .calendar-weekday {
+  font-size: 0.68rem;
+}
+
 .mini-calendar .calendar-day {
-  min-height: 72px;
+  border-radius: 6px;
+  min-height: 36px;
+  padding: 0.28rem;
+}
+
+.mini-calendar .mini-task {
+  display: none;
 }
 
 .mini-task,
@@ -513,6 +514,10 @@ form {
   grid-template-columns: 28px minmax(0, 1fr) 36px;
 }
 
+.checklist-row.dragging {
+  opacity: 0.55;
+}
+
 .checklist-row input[type="text"] {
   margin-top: 0;
 }
@@ -521,6 +526,13 @@ form {
   display: grid;
   height: 28px;
   place-items: center;
+}
+
+.drag-handle {
+  color: var(--muted);
+  cursor: grab;
+  font-weight: 900;
+  text-align: center;
 }
 
 .checklist-toggle input,
@@ -695,5 +707,58 @@ form {
 .chat-message small {
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.day-modal {
+  align-items: center;
+  background: rgba(16, 29, 25, 0.52);
+  display: grid;
+  inset: 0;
+  padding: 1rem;
+  position: fixed;
+  z-index: 60;
+}
+
+.day-modal-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-strong);
+  display: grid;
+  gap: 1rem;
+  margin: auto;
+  max-width: 520px;
+  padding: 1.2rem;
+  position: relative;
+  width: min(100%, 520px);
+}
+
+.modal-close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+}
+
+.day-modal-tasks {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.modal-task {
+  border-radius: 8px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  text-align: left;
+  white-space: normal;
+}
+
+.modal-task span {
+  font-size: 0.86rem;
+  opacity: 0.92;
+}
+
+.compact-empty {
+  padding: 1rem;
 }
 

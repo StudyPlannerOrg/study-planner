@@ -37,6 +37,11 @@ const chatbotClose = document.querySelector("#chatbot-close");
 const taskChecklist = document.querySelector("#task-checklist");
 const editChecklist = document.querySelector("#edit-checklist");
 const editChecklistProgress = document.querySelector("#edit-checklist-progress");
+const dayModal = document.querySelector("#day-modal");
+const dayModalTitle = document.querySelector("#day-modal-title");
+const dayModalTasks = document.querySelector("#day-modal-tasks");
+const dayModalAdd = document.querySelector("#day-modal-add");
+const dayModalClose = document.querySelector("#day-modal-close");
 
 const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
@@ -52,6 +57,8 @@ let selectedTaskId = null;
 let sessionTimer = null;
 let metricFilter = "all";
 let calendarMonth = new Date();
+let selectedCalendarDate = "";
+let modalMode = "day";
 
 init();
 
@@ -65,6 +72,10 @@ document.querySelectorAll("[data-go-home]").forEach((button) => {
 
 document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
+});
+
+document.querySelectorAll("[data-back], [data-cancel]").forEach((button) => {
+  button.addEventListener("click", () => setView(activeView === "detail" ? "agenda" : "dashboard"));
 });
 
 authSwitch.addEventListener("click", () => {
@@ -162,9 +173,7 @@ sortFilter.addEventListener("change", render);
 
 document.querySelectorAll("[data-metric-filter]").forEach((button) => {
   button.addEventListener("click", () => {
-    metricFilter = button.dataset.metricFilter;
-    setView("agenda");
-    render();
+    openMetricModal(button.dataset.metricFilter);
   });
 });
 
@@ -209,6 +218,43 @@ document.addEventListener("click", async (event) => {
 
 editChecklist.addEventListener("change", updateEditChecklistProgress);
 
+taskChecklist.addEventListener("dragstart", handleChecklistDragStart);
+taskChecklist.addEventListener("dragover", handleChecklistDragOver);
+taskChecklist.addEventListener("drop", handleChecklistDrop);
+taskChecklist.addEventListener("dragend", handleChecklistDragEnd);
+editChecklist.addEventListener("dragstart", handleChecklistDragStart);
+editChecklist.addEventListener("dragover", handleChecklistDragOver);
+editChecklist.addEventListener("drop", handleChecklistDrop);
+editChecklist.addEventListener("dragend", handleChecklistDragEnd);
+
+dayModalClose.addEventListener("click", closeDayModal);
+dayModal.addEventListener("click", (event) => {
+  if (event.target === dayModal) closeDayModal();
+});
+
+dayModalAdd.addEventListener("click", () => {
+  if (modalMode === "metric") {
+    metricFilter = dayModalAdd.dataset.metricFilter || "all";
+    closeDayModal();
+    setView("agenda");
+    render();
+    return;
+  }
+
+  form.reset();
+  form.dueDate.value = selectedCalendarDate;
+  renderChecklistEditor(taskChecklist, []);
+  closeDayModal();
+  setView("task");
+});
+
+dayModalTasks.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-modal-task]");
+  if (!button) return;
+  closeDayModal();
+  openTaskDetail(button.dataset.modalTask);
+});
+
 [calendarGrid, agendaCalendarGrid].forEach((grid) => {
   grid.addEventListener("click", (event) => {
     const taskButton = event.target.closest("[data-calendar-task]");
@@ -219,9 +265,7 @@ editChecklist.addEventListener("change", updateEditChecklistProgress);
 
     const day = event.target.closest("[data-calendar-date]");
     if (!day) return;
-    form.dueDate.value = day.dataset.calendarDate;
-    renderChecklistEditor(taskChecklist, []);
-    setView("task");
+    openDayModal(day.dataset.calendarDate);
   });
 });
 
@@ -329,7 +373,7 @@ function openTaskDetail(id) {
   editTaskForm.title.value = task.title;
   editTaskForm.type.value = task.type;
   editTaskForm.dueDate.value = normalizeDateValue(task.dueDate);
-  editTaskForm.hours.value = getEffortValue(task.hours);
+  editTaskForm.dueTime.value = task.dueTime || "";
   editTaskForm.notes.value = task.notes || "";
   editTaskForm.difficulty.value = task.difficulty;
   editTaskForm.status.value = task.status;
@@ -461,6 +505,7 @@ function collectTaskForm(formElement, checklistElement) {
     subject: "",
     type: data.get("type"),
     dueDate: data.get("dueDate"),
+    dueTime: data.get("dueTime"),
     hours: hours > 0 ? hours : null,
     notes: String(data.get("notes") || "").trim(),
     checklist: readChecklist(checklistElement),
@@ -470,16 +515,22 @@ function collectTaskForm(formElement, checklistElement) {
 }
 
 function addChecklistRow(container, item = {}) {
+  const isEdit = container === editChecklist;
   const row = document.createElement("div");
   row.className = "checklist-row";
+  row.draggable = true;
   row.dataset.itemId = item.id || crypto.randomUUID();
   row.innerHTML = `
-    <label class="checklist-toggle">
-      <input type="checkbox" ${item.done ? "checked" : ""} />
-      <span></span>
-    </label>
-    <input type="text" value="${escapeHtml(item.text || "")}" placeholder="Ej: leer consigna, buscar fuentes, resolver ejercicios" />
-    <button class="icon-button" type="button" data-checklist-remove aria-label="Quitar paso">x</button>
+    ${
+      isEdit
+        ? `<label class="checklist-toggle">
+            <input type="checkbox" ${item.done ? "checked" : ""} />
+            <span></span>
+          </label>`
+        : `<span class="drag-handle" aria-hidden="true">☰</span>`
+    }
+    <input type="text" value="${escapeHtml(item.text || "")}" placeholder="Ej: leer consigna, resolver ejercicios, revisar entrega" />
+    <button class="icon-button" type="button" data-checklist-remove aria-label="Quitar subtarea">x</button>
   `;
   container.appendChild(row);
 }
@@ -494,7 +545,7 @@ function readChecklist(container) {
     .map((row) => ({
       id: row.dataset.itemId || crypto.randomUUID(),
       text: row.querySelector('input[type="text"]').value.trim(),
-      done: row.querySelector('input[type="checkbox"]').checked,
+      done: Boolean(row.querySelector('input[type="checkbox"]')?.checked),
     }))
     .filter((item) => item.text);
 }
@@ -503,6 +554,88 @@ function updateEditChecklistProgress() {
   const checklist = readChecklist(editChecklist);
   const done = checklist.filter((item) => item.done).length;
   editChecklistProgress.textContent = `${done}/${checklist.length}`;
+}
+
+function handleChecklistDragStart(event) {
+  const row = event.target.closest(".checklist-row");
+  if (!row) return;
+  event.dataTransfer.setData("text/plain", row.dataset.itemId);
+  row.classList.add("dragging");
+}
+
+function handleChecklistDragOver(event) {
+  event.preventDefault();
+  const row = event.target.closest(".checklist-row");
+  const dragging = event.currentTarget.querySelector(".dragging");
+  if (!row || !dragging || row === dragging) return;
+  const before = event.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2;
+  event.currentTarget.insertBefore(dragging, before ? row : row.nextSibling);
+}
+
+function handleChecklistDrop(event) {
+  event.preventDefault();
+  handleChecklistDragEnd(event);
+}
+
+function handleChecklistDragEnd(event) {
+  event.currentTarget.querySelector(".dragging")?.classList.remove("dragging");
+}
+
+function openDayModal(date) {
+  modalMode = "day";
+  selectedCalendarDate = date;
+  const dayTasks = sortTasks(tasks.filter((task) => normalizeDateValue(task.dueDate) === date));
+  dayModalTitle.textContent = formatDate(date);
+  dayModalAdd.textContent = "Agregar tarea en este dia";
+  dayModalAdd.dataset.metricFilter = "";
+  dayModalTasks.innerHTML = dayTasks.length
+    ? dayTasks
+        .map(
+          (task) => `
+            <button class="modal-task ${getPriorityClass(task)}" type="button" data-modal-task="${task.id}">
+              <strong>${escapeHtml(task.title)}</strong>
+              <span>${escapeHtml(task.type)} - ${task.status}</span>
+            </button>
+          `
+        )
+        .join("")
+    : `<div class="empty-state compact-empty">No hay tareas para este dia.</div>`;
+  dayModal.classList.remove("hidden");
+}
+
+function openMetricModal(filter) {
+  modalMode = "metric";
+  const labels = {
+    active: "Tareas activas",
+    urgent: "Tareas urgentes",
+    week: "Vencen esta semana",
+    pending: "Tareas pendientes",
+  };
+  const previousFilter = metricFilter;
+  metricFilter = filter;
+  const metricTasks = getFilteredTasks();
+  metricFilter = previousFilter;
+  dayModalTitle.textContent = labels[filter] || "Tareas";
+  dayModalAdd.textContent = "Ver en agenda";
+  dayModalAdd.dataset.metricFilter = filter;
+  dayModalTasks.innerHTML = metricTasks.length
+    ? metricTasks
+        .slice(0, 6)
+        .map(
+          (task) => `
+            <button class="modal-task ${getPriorityClass(task)}" type="button" data-modal-task="${task.id}">
+              <strong>${escapeHtml(task.title)}</strong>
+              <span>${formatDate(task.dueDate)} - ${task.status}</span>
+            </button>
+          `
+        )
+        .join("")
+    : `<div class="empty-state compact-empty">No hay tareas en este grupo.</div>`;
+  dayModal.classList.remove("hidden");
+}
+
+function closeDayModal() {
+  dayModal.classList.add("hidden");
 }
 
 async function loadCloudTasks() {
@@ -516,7 +649,13 @@ async function toggleChecklistItem(taskId, itemId, done) {
 
   const checklist = (task.checklist || []).map((item) => (item.id === itemId ? { ...item, done } : item));
   const allDone = checklist.length && checklist.every((item) => item.done);
-  const status = allDone ? "Terminada" : task.status === "Terminada" ? "En progreso" : task.status;
+  const status = allDone
+    ? confirmAction("Completaste todas las subtareas. Queres marcar la tarea como terminada?")
+      ? "Terminada"
+      : task.status
+    : task.status === "Terminada"
+      ? "En progreso"
+      : task.status;
   await updateTask(taskId, { checklist, status });
 }
 
@@ -705,9 +844,8 @@ function renderTasks(items) {
             <div>
               <strong>${escapeHtml(task.title)}</strong>
               <div class="task-meta">
-                <span>${formatDate(task.dueDate)}</span>
+                <span>${formatDateTime(task)}</span>
                 <span>${escapeHtml(task.type)}</span>
-                <span>${formatEffort(task)}</span>
               </div>
             </div>
             <span class="tag ${priority}">${priority}</span>
@@ -768,6 +906,7 @@ function normalizeTaskDates(task) {
   return {
     ...task,
     dueDate: normalizeDateValue(task.dueDate),
+    dueTime: task.dueTime || "",
     hours: Number(task.hours) > 0 ? Number(task.hours) : null,
     subject: task.subject || "",
     notes: task.notes || "",
@@ -795,23 +934,11 @@ function sortForView(items) {
 }
 
 function formatTaskSubtitle(task) {
-  return [formatDate(task.dueDate), task.type].filter(Boolean).map(escapeHtml).join(" - ");
+  return [formatDateTime(task), task.type].filter(Boolean).map(escapeHtml).join(" - ");
 }
 
-function formatEffort(task) {
-  const hours = Number(task.hours);
-  if (hours >= 8) return "Tarea grande";
-  if (hours >= 5) return "Tarea media";
-  if (hours >= 1) return "Tarea chica";
-  return "Tamano sin definir";
-}
-
-function getEffortValue(hours) {
-  const parsed = Number(hours);
-  if (!parsed) return "";
-  if (parsed >= 7) return "8";
-  if (parsed >= 4) return "5";
-  return "2";
+function formatDateTime(task) {
+  return `${formatDate(task.dueDate)}${task.dueTime ? ` ${task.dueTime}` : ""}`;
 }
 
 function getPriorityClass(task) {

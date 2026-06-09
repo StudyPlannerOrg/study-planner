@@ -87,9 +87,9 @@ function getEffectiveHours(task) {
 }
 
 function getEffortText(task, breakdown) {
-  if (breakdown.usesEstimatedEffort) return "tamano estimado automaticamente";
+  if (breakdown.usesEstimatedEffort) return "requiere atencion segun su tipo";
   const hours = Number(task.hours);
-  if (hours >= 8) return "tamano grande";
-  if (hours >= 5) return "tamano medio";
-  return "tamano chico";
+  if (hours >= 8) return "demanda alta";
+  if (hours >= 5) return "demanda media";
+  return "demanda baja";
 }
