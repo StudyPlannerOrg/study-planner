@@ -5,6 +5,7 @@ const config = require("./config");
 const { initializeDatabase, pool } = require("./db");
 const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/auth");
+const hugoRoutes = require("./routes/hugo");
 const taskRoutes = require("./routes/tasks");
 
 const app = express();
@@ -21,6 +22,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/hugo", hugoRoutes);
 app.use("/api/tasks", taskRoutes);
 
 app.use("/api", (_req, res) => {

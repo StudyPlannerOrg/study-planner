@@ -246,6 +246,8 @@ Con eso n8n puede enviar un mail diario al usuario, por ejemplo: "Vence mañana:
 
 Para n8n en Render, el archivo `render.yaml` incluye un segundo servicio llamado `study-planner-n8n`. Ese servicio usa la imagen Docker oficial de n8n y variables de PostgreSQL para guardar workflows y credenciales en una base externa. Ver `docs/deploy.md` para los pasos completos.
 
+Para conectar Hugo con IA mediante un webhook de n8n, ver `docs/hugo-ia-n8n.md`.
+
 La guia paso a paso esta en `docs/deploy.md`.
 
 ## Trabajo colaborativo

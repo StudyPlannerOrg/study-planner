@@ -1,0 +1,86 @@
+{
+  "name": "Hugo asistente virtual",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hugo-study-planner",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0ab36e75-5061-4378-8c6b-0a14a0b90a6c",
+      "name": "Webhook Hugo",
+      "webhookId": "hugo-study-planner"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst headers = item.headers || {};\nconst body = item.body || {};\nconst expectedSecret = 'docker-n8n-secret';\n\nif (headers['x-hugo-secret'] !== expectedSecret) {\n  return [{ json: { reply: 'No autorizado.', statusCode: 401 } }];\n}\n\nconst message = String(body.message || '').toLowerCase();\nconst tasks = Array.isArray(body.tasks) ? body.tasks : [];\nconst active = tasks.filter((task) => task.status !== 'Terminada');\nconst completed = tasks.filter((task) => task.status === 'Terminada');\n\nfunction daysUntil(date) {\n  const today = new Date();\n  today.setHours(0, 0, 0, 0);\n  const due = new Date(`${date}T00:00:00`);\n  return Math.round((due.getTime() - today.getTime()) / 86400000);\n}\n\nfunction progress(task) {\n  const checklist = Array.isArray(task.checklist) ? task.checklist : [];\n  if (!checklist.length) return task.status === 'Terminada' ? 100 : task.status === 'En progreso' ? 45 : 0;\n  const done = checklist.filter((item) => item.done).length;\n  return Math.round((done / checklist.length) * 100);\n}\n\nfunction riskScore(task) {\n  const days = daysUntil(task.dueDate);\n  const dueRisk = days < 0 ? 50 : days <= 1 ? 42 : days <= 3 ? 32 : days <= 7 ? 18 : 6;\n  const difficultyRisk = task.difficulty === 'Alta' ? 28 : task.difficulty === 'Media' ? 16 : 8;\n  const progressRisk = progress(task) < 25 ? 24 : progress(task) < 60 ? 14 : 4;\n  const statusRisk = task.status === 'Pendiente' ? 10 : 0;\n  return dueRisk + difficultyRisk + progressRisk + statusRisk;\n}\n\nconst ranked = active\n  .map((task) => ({ task, risk: riskScore(task), days: daysUntil(task.dueDate), progress: progress(task) }))\n  .sort((a, b) => b.risk - a.risk);\n\nlet reply = '';\n\nif (!tasks.length) {\n  reply = 'Soy Hugo. Todavia no hay tareas cargadas; crea una actividad y puedo predecir riesgos por fecha, dificultad y avance.';\n} else if (message.includes('predic') || message.includes('riesgo') || message.includes('complic')) {\n  const top = ranked[0];\n  if (!top) {\n    reply = `Prediccion: no veo riesgo academico activo. Tenes ${completed.length} tarea(s) terminada(s) y ninguna pendiente.`;\n  } else {\n    const level = top.risk >= 80 ? 'alto' : top.risk >= 60 ? 'medio' : 'moderado';\n    reply = `Prediccion: el mayor riesgo es \"${top.task.title}\" con nivel ${level}. Vence en ${top.days} dia(s), dificultad ${top.task.difficulty} y avance ${top.progress}%. Mi recomendacion es resolver una subtarea concreta hoy y revisar si podes adelantar la entrega.`;\n  }\n} else if (message.includes('primero') || message.includes('prioridad') || message.includes('urgente')) {\n  const top = ranked[0];\n  reply = top\n    ? `Empezaria por \"${top.task.title}\". Combina vencimiento cercano, dificultad ${top.task.difficulty} y avance ${top.progress}%.`\n    : 'No tenes tareas activas para priorizar ahora.';\n} else if (message.includes('semana') || message.includes('vence') || message.includes('fecha')) {\n  const week = active.filter((task) => daysUntil(task.dueDate) <= 7).slice(0, 4);\n  reply = week.length\n    ? `Esta semana vigilaria: ${week.map((task) => `\"${task.title}\" (${task.dueDate})`).join(', ')}.`\n    : 'No veo tareas activas que venzan esta semana.';\n} else if (message.includes('progreso') || message.includes('voy') || message.includes('avance')) {\n  const total = tasks.length;\n  const pct = total ? Math.round((completed.length / total) * 100) : 0;\n  reply = `Vas con ${completed.length}/${total} tarea(s) terminada(s), equivalente a ${pct}%. Te quedan ${active.length} tarea(s) activa(s).`;\n} else {\n  const top = ranked[0];\n  reply = top\n    ? `Analice tu agenda. Lo mas sensible ahora es \"${top.task.title}\" por fecha, dificultad y avance. Puedo darte prioridad, vencimientos o prediccion de riesgo.`\n    : 'Tu agenda activa esta libre. Puedo ayudarte cuando cargues nuevas tareas.';\n}\n\nreturn [{ json: { reply, source: 'n8n-hugo', statusCode: 200 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "id": "147b5370-5597-4c24-bf2f-c531f394075f",
+      "name": "Generar respuesta"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.reply, source: $json.source || 'n8n-hugo' } }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        520,
+        0
+      ],
+      "id": "98650f51-97bb-498e-b7ac-ec3bdb7a44f0",
+      "name": "Responder a Hugo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Hugo": {
+      "main": [
+        [
+          {
+            "node": "Generar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar respuesta": {
+      "main": [
+        [
+          {
+            "node": "Responder a Hugo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f4378d1f-9a9f-47f2-8cd9-76f0c7cf23fc",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
