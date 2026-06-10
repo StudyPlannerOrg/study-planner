@@ -15,6 +15,10 @@ services:
         generateValue: true
       - key: N8N_SHARED_SECRET
         sync: false
+      - key: HUGO_N8N_WEBHOOK_URL
+        value: https://study-planner-n8n.onrender.com/webhook/hugo-study-planner
+      - key: HUGO_N8N_SECRET
+        sync: false
 
   - type: web
     name: study-planner-n8n
@@ -61,3 +65,9 @@ services:
         sync: false
       - key: N8N_SHARED_SECRET
         sync: false
+      - key: HUGO_N8N_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: N8N_BLOCK_ENV_ACCESS_IN_NODE
+        value: false

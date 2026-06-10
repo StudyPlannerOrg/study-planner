@@ -1,0 +1,139 @@
+{
+  "name": "Hugo asistente virtual",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hugo-study-planner",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "34d22ed1-293e-4984-bfe9-e725479e7edc",
+      "name": "Webhook Hugo",
+      "webhookId": "hugo-study-planner"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.reply, source: $json.source } }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        784,
+        0
+      ],
+      "id": "a45a0f8a-1e7a-42de-8421-adab7cb2b926",
+      "name": "Responder a Hugo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const content =\n  $json.choices?.[0]?.message?.content ||\n  \"\";\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(content);\n} catch {\n  parsed = { reply: content };\n}\n\nreturn [\n  {\n    json: {\n      reply: parsed.reply || \"Hugo no pudo generar una respuesta clara.\",\n      source: \"groq\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        0
+      ],
+      "id": "af894bfb-ce44-42af-ae96-6d83144cbb81",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.GROQ_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    model: \"llama-3.1-8b-instant\",\n    temperature: 0.2,\n    max_completion_tokens: 350,\n    messages: [\n      {\n        role: \"system\",\n        content: \"Sos Hugo, asistente academico de Study Planner (Agenda académica). Responde en español latinoamericano argentino, breve, claro, respetuoso y accionable. Usa solamente las tareas recibidas. Si haces una prediccion, explicala como una estimacion basada en fecha limite, dificultad, estado y subtareas. No inventes materias, fechas ni datos. Maximo 4 oraciones. Devolve solamente JSON valido con esta forma: {\\\"reply\\\":\\\"tu respuesta\\\"}\"\n      },\n      {\n        role: \"user\",\n        content:\n`Pregunta del usuario:\n${$json.body.message}\n\nTareas actuales:\n${JSON.stringify($json.body.tasks)}\n\nFecha actual:\n${$now}`\n      }\n    ]\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        0
+      ],
+      "id": "9afedb59-4c06-4c3c-b851-b0f237ce160b",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Hugo": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Responder a Hugo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "554ff8a6-67f4-41f0-bd94-d6b2e919a325",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "347145c59d99b1a88bf7c629a905db6316cc0c2945bfd275ddce45c95d739967"
+  },
+  "id": "eIESALJwBOSTLezU",
+  "tags": [
+    {
+      "updatedAt": "2026-06-09T21:45:05.269Z",
+      "createdAt": "2026-06-09T21:45:05.269Z",
+      "id": "94XPg3qKWf33XLzP",
+      "name": "Study Planner"
+    }
+  ]
+}
