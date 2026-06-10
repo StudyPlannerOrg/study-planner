@@ -122,6 +122,13 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .notification-panel {
+    left: 1rem;
+    right: 1rem;
+    top: 5rem;
+    width: auto;
+  }
+
   .auth-layout {
     grid-template-columns: 1fr;
   }
@@ -222,10 +229,33 @@
   .metrics-grid,
   .two-columns,
   .filters,
+  .filter-row,
   .feature-strip,
   .experience-grid,
   .tech-grid {
     grid-template-columns: 1fr;
+  }
+
+  .clear-filters {
+    width: 100%;
+  }
+
+  .task-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-delete {
+    width: 100%;
+  }
+
+  .section-back-button {
+    margin-left: 0;
+  }
+
+  .notification-panel {
+    max-height: min(70vh, 520px);
+    top: 4.5rem;
   }
 
   .task-main,

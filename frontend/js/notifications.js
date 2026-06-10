@@ -55,9 +55,9 @@ export function buildNotifications(tasks, getChecklistProgress) {
   ];
 }
 
-export function renderNotifications(elements, notifications) {
+export function renderNotifications(elements, notifications, options = {}) {
   elements.count.textContent = String(notifications.length);
-  elements.count.classList.toggle("empty", !notifications.length);
+  elements.count.classList.toggle("empty", !notifications.length || options.viewed);
 
   elements.list.innerHTML = notifications.length
     ? notifications

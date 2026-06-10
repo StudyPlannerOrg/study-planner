@@ -134,6 +134,7 @@
 .interactive-preview {
   animation: floatIn 700ms ease both;
   min-height: 460px;
+  padding: 1.4rem 1.2rem 2.2rem;
   position: relative;
 }
 
@@ -256,18 +257,19 @@
   gap: 0.2rem;
   padding: 0.9rem 1rem;
   position: absolute;
+  pointer-events: none;
   z-index: 3;
 }
 
 .orbit-one {
-  right: 2rem;
-  top: -1.8rem;
+  right: 2.4rem;
+  top: 0;
 }
 
 .orbit-two {
   animation-delay: 900ms;
-  bottom: 0.5rem;
-  left: -1rem;
+  bottom: 0;
+  left: 0.1rem;
 }
 
 .landing-section {
