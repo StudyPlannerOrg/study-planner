@@ -625,7 +625,7 @@ function closeSession(message = "", options = {}) {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
-  clearChatHistory(chatKey);
+  removeChatHistory(chatKey);
   notificationPanel.classList.add("hidden");
   chatbotPanel.classList.add("hidden");
   closeDayModal();
