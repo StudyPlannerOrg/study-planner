@@ -36,3 +36,14 @@ export async function apiRequest(path, options = {}, context = {}) {
     return null;
   }
 }
+
+export async function askHugoAi(message, tasks, context = {}) {
+  return apiRequest(
+    "/api/hugo/chat",
+    {
+      method: "POST",
+      body: JSON.stringify({ message, tasks }),
+    },
+    context
+  );
+}

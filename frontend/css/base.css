@@ -1,20 +1,23 @@
 ﻿:root {
-  --bg: #f4f7f5;
+  --bg: #f3f6f8;
   --panel: #ffffff;
-  --panel-soft: #f9fbfa;
-  --ink: #14201c;
-  --muted: #66716c;
-  --line: #dce5df;
-  --primary: #137260;
-  --primary-dark: #0d5347;
-  --secondary: #2563eb;
-  --accent: #eba12a;
-  --accent-soft: #fff3d6;
-  --urgent: #bd2118;
-  --high: #b75d00;
-  --normal: #2364aa;
-  --shadow: 0 18px 40px rgba(18, 45, 37, 0.08);
-  --shadow-strong: 0 28px 80px rgba(23, 35, 31, 0.16);
+  --panel-soft: #f8fbfc;
+  --ink: #17212b;
+  --muted: #657383;
+  --line: #d9e2ea;
+  --primary: #0f766e;
+  --primary-dark: #115e59;
+  --secondary: #3b82f6;
+  --accent: #f59e0b;
+  --accent-soft: #fff7df;
+  --success: #16a34a;
+  --urgent: #dc2626;
+  --high: #d97706;
+  --normal: #2563eb;
+  --surface-gradient: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(59, 130, 246, 0.08));
+  --shadow: 0 18px 44px rgba(22, 33, 43, 0.08);
+  --shadow-strong: 0 28px 90px rgba(22, 33, 43, 0.16);
+  --ring: 0 0 0 4px rgba(15, 118, 110, 0.16);
 }
 
 * {
@@ -29,9 +32,12 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(243, 246, 248, 0.94)),
+    var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -44,7 +50,7 @@ textarea {
 button {
   border: 0;
   border-radius: 8px;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: #fff;
   cursor: pointer;
   font-weight: 800;
@@ -54,9 +60,19 @@ button {
 }
 
 button:hover {
-  background: var(--primary-dark);
+  background: linear-gradient(135deg, var(--primary-dark), #0b4f49);
   box-shadow: 0 12px 22px rgba(20, 108, 90, 0.18);
   transform: translateY(-1px);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  box-shadow: var(--ring);
+  outline: none;
 }
 
 h1,
@@ -96,7 +112,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(20, 108, 90, 0.12);
+  box-shadow: var(--ring);
   outline: none;
 }
 
@@ -158,7 +174,8 @@ label {
 
 .brand-logo {
   align-items: center;
-  background: #edf6fb;
+  background: #e9f7f6;
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 10px;
   display: grid;
   flex: 0 0 auto;
@@ -172,3 +189,18 @@ label {
   color: var(--muted);
   display: block;
   font-size: 0.9rem;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}

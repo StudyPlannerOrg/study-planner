@@ -1,4 +1,4 @@
-import { apiRequest as requestApiRaw, checkApiHealth } from "./js/api.js";
+import { apiRequest as requestApiRaw, askHugoAi, checkApiHealth } from "./js/api.js";
 import { buildHugoReply, renderRecommendations as renderChatbotRecommendations } from "./js/chatbot.js";
 import {
   addChecklistRow,
@@ -10,7 +10,7 @@ import {
   renderChecklistEditor,
   updateChecklistProgress,
 } from "./js/checklist.js";
-import { STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
+import { CHAT_KEY, STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
 import { demoTasks } from "./js/demoTasks.js";
 import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
 import { escapeHtml, readJson } from "./js/helpers.js";
@@ -71,6 +71,7 @@ const notificationList = document.querySelector("#notification-list");
 const browserNotifications = document.querySelector("#browser-notifications");
 const chatbotToggle = document.querySelector("#chatbot-toggle");
 const chatbotPanel = document.querySelector("#chatbot-panel");
+const chatbotResize = document.querySelector("#chatbot-resize");
 const chatbotClose = document.querySelector("#chatbot-close");
 const chatbotForm = document.querySelector("#chatbot-form");
 const chatbotInput = document.querySelector("#chatbot-input");
@@ -86,6 +87,7 @@ const dayModalClose = document.querySelector("#day-modal-close");
 const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
 const BROWSER_NOTIFICATION_KEY = "studyplanner.browserNotificationsSent";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
+const CHAT_TIMEOUT_MS = 10 * 60 * 1000;
 const SESSION_ACTIVITY_EVENTS = ["click", "keydown", "mousemove", "scroll", "touchstart"];
 
 let tasks = [];
@@ -140,6 +142,12 @@ chatbotToggle.addEventListener("click", () => {
 
 chatbotClose.addEventListener("click", () => {
   chatbotPanel.classList.add("hidden");
+});
+
+chatbotResize.addEventListener("click", () => {
+  const expanded = chatbotPanel.classList.toggle("expanded");
+  chatbotResize.setAttribute("aria-label", expanded ? "Reducir chat" : "Ampliar chat");
+  chatbotInput.focus();
 });
 
 notificationToggle.addEventListener("click", () => {
@@ -220,6 +228,7 @@ authForm.addEventListener("submit", async (event) => {
   currentUser = response.user;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+  loadChatHistory();
   refreshSessionActivity();
   startSessionTimer();
   authForm.reset();
@@ -384,6 +393,7 @@ async function init() {
   form.dueDate.value = todayOffset(1);
   renderChecklistEditor(taskChecklist, []);
   expireSessionIfNeeded();
+  loadChatHistory();
   apiAvailable = await checkApiHealth();
 
   if (isCloudMode()) {
@@ -423,6 +433,7 @@ function showApp() {
   landingPage.classList.add("hidden");
   authPage.classList.add("hidden");
   appShell.classList.remove("hidden");
+  loadChatHistory();
   setView(activeView);
 }
 
@@ -494,18 +505,22 @@ function loadLocalMode() {
   token = null;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  loadChatHistory();
   showApp();
   render();
 }
 
 function closeSession(message = "") {
+  const chatKey = getChatStorageKey();
   token = null;
   currentUser = null;
   tasks = [];
+  chatMessages = [];
   stopSessionTimer();
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
+  clearChatHistory(chatKey);
   if (message) authCopy.textContent = message;
   updateSessionUi();
   showLanding();
@@ -627,14 +642,35 @@ async function requestBrowserNotifications() {
   await requestNativeNotifications(browserNotifications, getCurrentNotifications(), BROWSER_NOTIFICATION_KEY);
 }
 
-function sendHugoMessage(text) {
+async function sendHugoMessage(text) {
   const message = String(text || "").trim();
   if (!message) return;
 
   chatMessages.push({ from: "user", text: message });
-  chatMessages.push({ from: "bot", text: buildHugoReply(message, tasks, { formatProgress, sortTasks }) });
+  const thinkingId = crypto.randomUUID();
+  chatMessages.push({ from: "bot", text: "Hugo esta pensando", thinking: true, id: thinkingId });
   chatMessages = chatMessages.slice(-10);
   chatbotInput.value = "";
+  renderRecommendations();
+
+  const localAction = executeHugoAction(message);
+  const localReply = buildHugoReply(message, tasks, { formatProgress, sortTasks });
+  let reply = localAction?.reply || localReply;
+  let source = "local";
+
+  if (!localAction && isCloudMode()) {
+    const aiReply = await askHugoAi(message, tasks, {
+      token,
+      onAuthError: () => signOutButton.click(),
+    });
+    if (aiReply?.reply) {
+      reply = aiReply.reply;
+      source = aiReply.source || "ia";
+    }
+  }
+
+  chatMessages = chatMessages.map((item) => (item.id === thinkingId ? { from: "bot", text: reply, source } : item)).slice(-10);
+  persistChatHistory();
   renderRecommendations();
 }
 
@@ -856,4 +892,97 @@ function renderTasks(items) {
 
 function renderRecommendations() {
   renderChatbotRecommendations(recommendations, tasks, chatMessages, { formatProgress });
+}
+
+function executeHugoAction(message) {
+  const normalized = normalizeChatText(message);
+
+  if (includesAny(normalized, ["crear tarea", "nueva tarea", "agregar tarea", "cargar tarea", "crear una tarea", "agregar una tarea"])) {
+    form.reset();
+    form.dueDate.value = todayOffset(1);
+    renderChecklistEditor(taskChecklist, []);
+    setView("task");
+    return { reply: "Te abri el formulario de nueva tarea. Completa titulo, fecha limite, tipo y dificultad; despues toca Crear tarea." };
+  }
+
+  if (includesAny(normalized, ["ver agenda", "abrir agenda", "ir a agenda", "agenda completa"])) {
+    setView("agenda");
+    return { reply: "Te abri la agenda completa. Desde ahi podes buscar, filtrar y abrir cualquier tarea para editarla." };
+  }
+
+  if (includesAny(normalized, ["ir al inicio", "ver inicio", "abrir inicio", "dashboard", "panel"])) {
+    setView("dashboard");
+    return { reply: "Te lleve al panel principal. Ahi ves metricas, foco proximo, calendario y acciones rapidas." };
+  }
+
+  if (includesAny(normalized, ["editar", "modificar", "cambiar", "eliminar", "borrar"])) {
+    const task = findTaskMention(message);
+    if (task) {
+      openTaskDetail(task.id);
+      const deleteIntent = includesAny(normalized, ["eliminar", "borrar"]);
+      return {
+        reply: deleteIntent
+          ? `Te abri "${task.title}". Para eliminarla, toca el boton Eliminar y confirma la accion.`
+          : `Te abri "${task.title}" para editarla. Cambia los datos que necesites y toca Guardar tarea.`,
+      };
+    }
+
+    setView("agenda");
+    return {
+      reply:
+        "Te abri la agenda para que elijas la tarea. Entra a una tarjeta para editarla; si queres eliminarla, usa el boton Eliminar dentro de esa tarea.",
+    };
+  }
+
+  return null;
+}
+
+function findTaskMention(message) {
+  const normalized = normalizeChatText(message);
+  return tasks.find((task) => {
+    const title = normalizeChatText(task.title || "");
+    return title && normalized.includes(title);
+  });
+}
+
+function includesAny(text, options) {
+  return options.some((option) => text.includes(option));
+}
+
+function normalizeChatText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getChatStorageKey() {
+  return `${CHAT_KEY}.${currentUser?.id || "local"}`;
+}
+
+function loadChatHistory() {
+  const stored = readJson(getChatStorageKey());
+  if (!stored || !Array.isArray(stored.messages) || Date.now() - Number(stored.updatedAt || 0) > CHAT_TIMEOUT_MS) {
+    chatMessages = [];
+    clearChatHistory();
+    return;
+  }
+
+  chatMessages = stored.messages
+    .filter((message) => message && (message.from === "user" || message.from === "bot") && typeof message.text === "string")
+    .slice(-10);
+}
+
+function persistChatHistory() {
+  localStorage.setItem(
+    getChatStorageKey(),
+    JSON.stringify({
+      updatedAt: Date.now(),
+      messages: chatMessages.filter((message) => !message.thinking).slice(-10),
+    })
+  );
+}
+
+function clearChatHistory(key = getChatStorageKey()) {
+  localStorage.removeItem(key);
 }
