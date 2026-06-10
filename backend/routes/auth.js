@@ -13,6 +13,7 @@ router.post("/register", async (req, res) => {
   if (!pool) return missingDatabase(res);
 
   const { email, password } = req.body;
+  const name = normalizeName(req.body?.name);
   if (!isValidEmail(email) || !isValidPassword(password)) {
     return res.status(400).json({ message: "Email o password invalidos." });
   }
@@ -22,8 +23,8 @@ router.post("/register", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "insert into users (id, email, password_hash) values ($1, $2, $3) returning id, email",
-      [id, email.toLowerCase(), passwordHash]
+      "insert into users (id, name, email, password_hash) values ($1, $2, $3, $4) returning id, name, email",
+      [id, name, email.toLowerCase(), passwordHash]
     );
     res.status(201).json(createAuthResponse(result.rows[0]));
   } catch (error) {
@@ -42,7 +43,7 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ message: "Email o password invalidos." });
   }
 
-  const result = await pool.query("select id, email, password_hash from users where email = $1", [email.toLowerCase()]);
+  const result = await pool.query("select id, name, email, password_hash from users where email = $1", [email.toLowerCase()]);
   const user = result.rows[0];
   const matches = user ? await bcrypt.compare(password, user.password_hash) : false;
 
@@ -54,9 +55,14 @@ router.post("/login", async (req, res) => {
 });
 
 function createAuthResponse(user) {
-  const safeUser = { id: user.id, email: user.email };
+  const safeUser = { id: user.id, name: user.name || "", email: user.email };
   const token = jwt.sign(safeUser, config.jwtSecret, { expiresIn: "7d" });
   return { token, user: safeUser };
+}
+
+function normalizeName(name) {
+  const value = String(name || "").trim().replace(/\s+/g, " ");
+  return value.slice(0, 80);
 }
 
 module.exports = router;

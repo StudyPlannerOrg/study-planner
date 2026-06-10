@@ -1,5 +1,6 @@
 create table if not exists users (
   id text primary key,
+  name text,
   email text not null unique,
   password_hash text not null,
   created_at timestamptz not null default now()
@@ -21,6 +22,7 @@ create table if not exists tasks (
 );
 
 alter table tasks alter column hours drop not null;
+alter table users add column if not exists name text;
 alter table tasks alter column notes drop not null;
 alter table tasks add column if not exists checklist jsonb not null default '[]'::jsonb;
 alter table tasks add column if not exists due_time text;
