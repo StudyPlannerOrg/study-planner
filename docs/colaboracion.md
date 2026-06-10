@@ -70,34 +70,3 @@ git push -u origin feature/nombre-de-la-rama
 
 7. Mergear a `main`.
 
-## Evidencia para mostrar al docente
-
-En GitHub se debe poder ver:
-
-- 4 ramas de trabajo.
-- Commits de distintos integrantes.
-- Pull requests hacia `main`.
-- Historial de merges.
-- GitHub Actions ejecutandose.
-- Deploy final en Render.
-
-## Reglas de commits
-
-Usar mensajes claros:
-
-```text
-feat: agrega login con JWT
-feat: crea CRUD de tareas
-docs: actualiza guia de despliegue
-style: mejora layout responsive
-fix: corrige validacion de formulario
-```
-
-Evitar commits genericos como:
-
-```text
-cambios
-arreglo
-cosas
-final
-```

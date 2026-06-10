@@ -1,47 +1,115 @@
-# Study Planner
+<div align="center">
+  <img src="frontend/assets/hugo-mascot.png" alt="Hugo, asistente virtual de Study Planner" width="130" />
 
-![Hugo, asistente virtual de Study Planner](frontend/assets/hugo-mascot.png)
+  <h1>Study Planner</h1>
+  <p><strong>Organiza tus entregas, parciales y pendientes en un plan claro.</strong></p>
 
-Study Planner es una aplicacion full stack para organizar tareas academicas, entregas, parciales y horas de estudio. El sistema permite crear una cuenta, iniciar sesion, guardar tareas en PostgreSQL, filtrar la agenda, marcar avances y recibir recomendaciones de priorizacion con un asistente basado en reglas explicables.
+  <p>
+    <a href="https://study-planner-05jn.onrender.com/">Abrir la app online</a>
+  </p>
+</div>
 
-El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias fechas limite, tareas y trabajos pendientes.
+## Menu
+
+- [Descripcion](#descripcion)
+- [Funcionalidades](#funcionalidades)
+- [Como se usa la app](#como-se-usa-la-app)
+- [Tecnologias e IA utilizadas](#tecnologias-e-ia-utilizadas)
+- [Guia rapida para poner en marcha el proyecto](#guia-rapida-para-poner-en-marcha-el-proyecto)
+- [Scripts utiles](#scripts-utiles)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Bonus: agente autonomo](#bonus-agente-autonomo)
+- [Documentacion adicional](#documentacion-adicional)
+
+## Descripcion
+
+Study Planner es una aplicacion web creada para estudiantes que necesitan ordenar materias, entregas, parciales, finales y trabajos practicos sin perder tiempo decidiendo por donde empezar.
+
+La app funciona como una agenda academica inteligente: permite cargar tareas, marcar avances, dividir actividades en subtareas, ver un calendario completo y recibir ayuda de Hugo, el asistente virtual del proyecto. Hugo orienta al usuario con recomendaciones simples sobre prioridades, vencimientos, progreso y riesgo academico.
+
+La idea principal es que el estudiante pueda entrar a la app y responder rapidamente tres preguntas:
+
+- Que tengo pendiente?
+- Que vence primero?
+- Que deberia hacer ahora?
 
 ## Funcionalidades
 
-- Registro e inicio de sesion con email y password.
-- Backend propio con Node.js, Express y API REST.
-- Base de datos PostgreSQL.
-- Autenticacion con JWT.
-- Alta, listado, actualizacion y eliminacion de tareas por usuario.
-- Fallback local con `localStorage` si el backend no esta disponible.
-- Agenda filtrable por texto y dificultad.
-- Metricas de tareas activas, urgentes, entregas de la semana y horas pendientes.
-- Hugo, asistente virtual de la app, calcula un puntaje de prioridad segun vencimiento, dificultad, tipo de tarea y carga horaria.
-- Notificaciones internas y recordatorios por email con n8n.
-- Agente autonomo de revision del repositorio mediante GitHub Actions.
+- Crear una cuenta e ingresar para tener una agenda personal.
+- Cargar tareas academicas con titulo, fecha limite, hora, tipo, dificultad y descripcion.
+- Agregar subtareas para dividir trabajos grandes en pasos mas faciles.
+- Ver un inicio con resumen de tareas activas, urgentes, pendientes y vencimientos cercanos.
+- Consultar un calendario completo para ubicar entregas por fecha.
+- Filtrar tareas por texto, estado, dificultad, fecha, prioridad y progreso.
+- Ordenar la lista para encontrar mas rapido lo importante.
+- Marcar una tarea como pendiente, en progreso o terminada.
+- Editar o eliminar tareas cuando cambian las fechas o prioridades.
+- Recibir notificaciones internas sobre entregas importantes.
+- Usar a Hugo para preguntar que conviene hacer primero, que vence esta semana o como va el avance.
+- Usar la app en modo local si el backend no esta disponible.
 
-## Identidad visual
+## Como se usa la app
 
-- Mascota/asistente virtual: Hugo, el buho de `frontend/assets/hugo-mascot.png`.
-- La interfaz usa a Hugo en la navegacion, el favicon y el asistente flotante.
-- Si se cuenta con el logo original exacto con texto, guardarlo como `frontend/assets/logo-original.png` y usarlo solo en piezas de marca/documentacion.
+1. Entrar a la app desde el link online o ejecutarla localmente.
+2. Crear una cuenta con nombre, email y password.
+3. Ir a "Nueva tarea" y cargar una actividad academica.
+4. Completar fecha limite, dificultad, tipo de tarea y subtareas si corresponde.
+5. Revisar el inicio para ver prioridades y proximos vencimientos.
+6. Abrir la agenda para ver el calendario y el listado completo.
+7. Usar filtros cuando haya muchas tareas cargadas.
+8. Cambiar el estado de cada tarea a medida que se avanza.
+9. Consultar a Hugo si se necesita una recomendacion rapida.
 
-## Tecnologias usadas
+## Tecnologias e IA utilizadas
 
-- HTML5
-- CSS3 responsive
-- JavaScript vanilla
-- Node.js
-- Express
-- PostgreSQL
-- JWT
-- bcryptjs
-- GitHub Actions para validacion y agente autonomo
-- IA utilizada durante el desarrollo: Codex / ChatGPT para analizar la consigna, elegir una idea viable, generar codigo, revisar estructura y documentar la entrega.
+<p>
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=111111" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/n8n-EA4B71?style=for-the-badge&logo=n8n&logoColor=white" alt="n8n" />
+  <img src="https://img.shields.io/badge/Render-000000?style=for-the-badge&logo=render&logoColor=white" alt="Render" />
+  <img src="https://img.shields.io/badge/Neon-00E599?style=for-the-badge&logo=neon&logoColor=111111" alt="Neon" />
+  <img src="https://img.shields.io/badge/ChatGPT%20%2F%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="ChatGPT Codex" />
+</p>
 
-## Como ejecutar el proyecto
+La IA se uso como apoyo durante el desarrollo para analizar la consigna, planificar el alcance, programar partes del frontend y backend, depurar errores, mejorar la interfaz y preparar la documentacion final.
 
-### Opcion 1: Node local
+Herramientas de IA y automatizacion usadas:
+
+- ChatGPT / Codex: apoyo principal para programacion, revision y documentacion.
+- Hugo: asistente virtual propio dentro de Study Planner.
+- n8n: automatizacion de recordatorios y puente para conectar Hugo con flujos de IA.
+
+El detalle completo esta en [`docs/informe-tecnico.md`](docs/informe-tecnico.md).
+
+## Guia rapida para poner en marcha el proyecto
+
+### Opcion recomendada: Docker
+
+Esta opcion levanta la app, la base de datos y n8n con un solo comando:
+
+```bash
+docker compose up --build
+```
+
+Luego abrir:
+
+```text
+http://localhost:3001
+```
+
+n8n local:
+
+```text
+http://localhost:5679
+```
+
+### Opcion local con Node.js
 
 1. Instalar dependencias:
 
@@ -49,22 +117,24 @@ El objetivo del proyecto es resolver un problema real de estudiantes: decidir qu
 npm install
 ```
 
-2. Crear un archivo `.env` usando `.env.example` como base. Este archivo es local y no se sube al repositorio:
+2. Crear un archivo `.env` usando `.env.example` como base:
 
 ```env
 PORT=3000
 DATABASE_URL=postgres://usuario:password@localhost:5432/study_planner
 JWT_SECRET=cambia-este-secreto-en-produccion
 N8N_SHARED_SECRET=
+HUGO_N8N_WEBHOOK_URL=
+HUGO_N8N_SECRET=
 ```
 
-3. Verificar que las variables locales esten completas:
+3. Verificar variables:
 
 ```bash
 npm run check:env
 ```
 
-4. Ejecutar la aplicacion:
+4. Ejecutar:
 
 ```bash
 npm start
@@ -76,287 +146,109 @@ npm start
 http://localhost:3000
 ```
 
-El servidor crea las tablas necesarias usando `db/schema.sql` al iniciar.
-
-### Opcion 2: Docker
-
-Tambien se puede levantar la app con PostgreSQL y n8n usando Docker:
+## Scripts utiles
 
 ```bash
-docker compose up --build
+npm run check
 ```
 
-Luego abrir la app:
+Valida sintaxis de backend, frontend y scripts.
+
+```bash
+npm run check:env
+```
+
+Revisa que las variables de entorno esten configuradas.
+
+```bash
+npm run agent
+```
+
+Ejecuta la revision automatica del repositorio.
+
+## Estructura del proyecto
 
 ```text
-http://localhost:3001
-```
-
-Y abrir n8n local:
-
-```text
-http://localhost:5679
-```
-
-Este modo crea contenedores para la app, PostgreSQL y n8n. Los workflows de n8n quedan guardados en el volumen `n8n-data`.
-
-## Base de datos
-
-El proyecto usa PostgreSQL con dos tablas principales:
-
-- `users`: guarda usuarios y password hasheado.
-- `tasks`: guarda tareas academicas asociadas al usuario.
-
-El esquema esta en:
-
-```text
-db/schema.sql
-```
-
-## API REST
-
-Endpoints principales:
-
-```text
-POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/tasks
-POST   /api/tasks
-PATCH  /api/tasks/:id
-DELETE /api/tasks/:id
-POST   /api/tasks/demo
-GET    /api/health
-```
-
-Las rutas de tareas requieren token JWT en el header:
-
-```text
-Authorization: Bearer <token>
-```
-
-## Despliegue recomendado
-
-Para esta arquitectura conviene desplegar:
-
-- Aplicacion Node/Express: Render.
-- Base PostgreSQL: Neon.
-- Repositorio: GitHub.
-
-Variables necesarias en produccion:
-
-```text
-DATABASE_URL
-JWT_SECRET
-PORT
-N8N_SHARED_SECRET # secreto compartido para que n8n consulte recordatorios
-```
-
-Para usar n8n en ambos ambientes:
-
-```text
-Docker local:
-HTTP Request de n8n -> http://app:3000/api/tasks/due-reminders
-
-Render online:
-HTTP Request de n8n -> https://study-planner.onrender.com/api/tasks/due-reminders
-```
-
-La URL local `http://app:3000/...` solo funciona entre contenedores Docker. n8n publicado en Render necesita llamar a la URL publica de la app.
-
-## Automatizaciones con n8n
-
-La app expone un endpoint para que n8n consulte tareas que vencen hoy o mañana. Los mails de recordatorio no dependen de crear o editar tareas. El payload de recordatorio tiene esta forma:
-
-```json
-{
-  "event": "task.due_reminder",
-  "user": {
-    "email": "usuario@ejemplo.com"
-  },
-  "task": {
-    "title": "TP Integrador",
-    "dueDate": "2026-06-10",
-    "dueTime": "18:00",
-    "status": "Pendiente",
-    "difficulty": "Alta"
-  },
-  "reminder": {
-    "label": "Vence mañana",
-    "dueInDays": 1
-  }
-}
-```
-
-Eventos enviados:
-
-```text
-task.due_reminder
-```
-
-La app no manda mails al crear o editar tareas. Para recordatorios diarios reales, crear un workflow programado en n8n:
-
-```text
-Schedule Trigger -> HTTP Request -> If -> Gmail
-```
-
-Configuracion local del `HTTP Request`:
-
-```text
-Method: GET
-URL: http://app:3000/api/tasks/due-reminders
-Header: x-n8n-secret = docker-n8n-secret
-```
-
-Workflow para importar en n8n local:
-
-```text
-n8n/workflows/local/avisos-por-vencimiento.local.json
-```
-
-Configuracion online del `HTTP Request`:
-
-```text
-Method: GET
-URL: https://study-planner.onrender.com/api/tasks/due-reminders
-Header: x-n8n-secret = el mismo valor de N8N_SHARED_SECRET configurado en Render
-```
-
-Workflow para importar en n8n online:
-
-```text
-n8n/workflows/online/avisos-por-vencimiento.online.json
-```
-
-El workflow online usa `{{$env.N8N_SHARED_SECRET}}`; configurar esa variable tambien en el servicio n8n de Render.
-
-Luego en `If`, usar la condicion:
-
-```text
-{{ $json.reminders.length }} is greater than 0
-```
-
-Y en Gmail usar:
-
-```text
-To: {{$json.reminders[0].user.email}}
-Subject: {{$json.reminders[0].reminder.label}}: {{$json.reminders[0].task.title}}
-```
-
-Con eso n8n puede enviar un mail diario al usuario, por ejemplo: "Vence mañana: TP Integrador".
-
-Para n8n en Render, el archivo `render.yaml` incluye un segundo servicio llamado `study-planner-n8n`. Ese servicio usa la imagen Docker oficial de n8n y variables de PostgreSQL para guardar workflows y credenciales en una base externa. Ver `docs/deploy.md` para los pasos completos.
-
-Para conectar Hugo con IA mediante un webhook de n8n, ver `docs/hugo-ia-n8n.md`.
-
-La guia paso a paso esta en `docs/deploy.md`.
-
-## Trabajo colaborativo
-
-El proyecto esta preparado para mostrar aportes individuales mediante ramas y pull requests. La guia esta en `docs/colaboracion.md`.
-
-Ramas sugeridas:
-
-```text
-feature/frontend-ui
-feature/backend-api
-feature/database-auth
-feature/docs-deploy
-```
-
-Cada integrante debe trabajar en su rama, hacer commits propios y abrir un Pull Request hacia `main`.
-
-## Estructura
-
-```text
-.
-|-- package.json
-|-- Dockerfile
-|-- docker-compose.yml
-|-- .dockerignore
-|-- render.yaml
-|-- .env                  # local, ignorado por Git
-|-- .env.example
-|-- frontend/
-|   |-- index.html
-|   |-- styles.css
-|   |-- app.js
-|   |-- assets/
-|   |   `-- hugo-mascot.png
-|   |-- css/
-|   |   |-- base.css
-|   |   |-- landing.css
-|   |   |-- auth.css
-|   |   |-- app.css
-|   |   `-- responsive.css
-|   `-- js/
-|       |-- api.js
-|       |-- chatbot.js
-|       |-- checklist.js
-|       |-- config.js
-|       |-- dates.js
-|       |-- demoTasks.js
-|       |-- helpers.js
-|       |-- notifications.js
-|       |-- priority.js
-|       |-- storage.js
-|       `-- taskUtils.js
-|-- backend/
-|   |-- server.js
-|   |-- config.js
-|   |-- db.js
-|   |-- constants/
-|   |-- services/
-|   |-- repositories/
-|   |-- routes/
-|   |-- middleware/
-|   `-- utils/
-|-- n8n/
-|   `-- workflows/
-|       |-- local/
-|       `-- online/
+.                                      # Carpeta raiz del proyecto
+|-- backend/                           # Servidor, API, autenticacion y logica del backend
+|   |-- constants/                     # Opciones fijas usadas por las tareas
+|   |-- middleware/                    # Validacion de token y manejo de errores
+|   |-- repositories/                  # Consultas a PostgreSQL
+|   |-- routes/                        # Endpoints de auth, tareas y Hugo
+|   |-- services/                      # Reglas de negocio y prioridad
+|   |-- utils/                         # Helpers, validaciones y mapeos
+|   |-- config.js                      # Lectura centralizada de variables de entorno
+|   |-- db.js                          # Conexion e inicializacion de PostgreSQL
+|   `-- server.js                      # Entrada principal del backend Express
 |-- db/
-|   `-- schema.sql
+|   `-- schema.sql                     # Tablas y migraciones simples de la base
+|-- docs/                              # Documentacion complementaria del proyecto
+|   |-- colaboracion.md                # Guia de ramas y trabajo en equipo
+|   |-- deploy.md                      # Guia de publicacion en Render y Neon
+|   |-- hugo-ia-n8n.md                 # Integracion de Hugo con n8n e IA
+|   `-- informe-tecnico.md             # Bitacora tecnica de la entrega
+|-- frontend/                          # Interfaz web de Study Planner
+|   |-- assets/                        # Imagenes y recursos visuales
+|   |-- css/                           # Estilos separados por pantalla y responsive
+|   |-- js/                            # Modulos reutilizables del frontend
+|   |   |-- agenda.js                  # Filtros, ordenamiento y paginacion de agenda
+|   |   |-- api.js                     # Comunicacion con el backend
+|   |   |-- calendar.js                # Render de calendario resumido y completo
+|   |   |-- chatHistory.js             # Persistencia del historial de Hugo
+|   |   |-- chatbot.js                 # Respuestas locales de Hugo
+|   |   |-- checklist.js               # Subtareas y editor de checklist
+|   |   |-- config.js                  # Claves usadas en localStorage
+|   |   |-- dashboard.js               # Metricas y panel de prioridad del inicio
+|   |   |-- dates.js                   # Formato y normalizacion de fechas
+|   |   |-- demoTasks.js               # Tareas demo para modo local
+|   |   |-- helpers.js                 # Utilidades generales
+|   |   |-- hugoActions.js             # Acciones locales que Hugo puede ejecutar
+|   |   |-- modals.js                  # Contenido de modales de calendario y metricas
+|   |   |-- notifications.js           # Avisos internos de estudio
+|   |   |-- priority.js                # Calculo de prioridad academica
+|   |   |-- storage.js                 # Persistencia local
+|   |   |-- taskCards.js               # Render de tarjetas de tareas
+|   |   `-- taskUtils.js               # Utilidades comunes de tareas
+|   |-- app.js                         # Coordinador principal de eventos y estado
+|   |-- index.html                     # Estructura visual de la aplicacion
+|   `-- styles.css                     # Archivo que importa todos los estilos
+|-- n8n/
+|   `-- workflows/                     # Workflows listos para importar
+|       |-- local/                     # Automatizaciones para Docker local
+|       `-- online/                    # Automatizaciones para entorno publicado
 |-- scripts/
-|   |-- repo-agent.js
-|   `-- check-env.js
-|-- docs/
-|   |-- deploy.md
-|   |-- colaboracion.md
-|   |-- informe-tecnico.md
-|   `-- consigna-tp-integrador.pdf
-`-- .github/workflows/
-    |-- ci.yml
-    `-- agent-review.yml
+|   |-- check-env.js                   # Verifica variables de entorno
+|   `-- repo-agent.js                  # Agente autonomo de revision
+|-- Dockerfile                         # Imagen de la app
+|-- docker-compose.yml                 # App + PostgreSQL + n8n en local
+|-- package.json                       # Dependencias y scripts npm
+|-- render.yaml                        # Configuracion sugerida para Render
+`-- README.md                          # Presentacion principal del proyecto
 ```
 
 ## Bonus: agente autonomo
 
-El repositorio incluye un agente autonomo de revision en `scripts/repo-agent.js`. Este agente se ejecuta con GitHub Actions y revisa automaticamente:
+El proyecto incluye un pequeno agente de revision pensado como una ayuda extra para la entrega. No modifica la app ni reemplaza una revision humana: simplemente revisa que el repositorio tenga los elementos importantes antes de presentar.
 
-- Archivos obligatorios de la entrega.
-- README con menciones al uso de IA.
-- Informe tecnico con herramientas y lecciones aprendidas.
-- Persistencia local en la app.
-- Backend Express con API REST.
-- Reglas de tareas respaldadas en servicios del backend.
-- Base PostgreSQL.
-- Configuracion de despliegue en Render.
-- Configuracion Docker.
-- Existencia del asistente de priorizacion en frontend y respaldo de prioridad en backend.
-- Coherencia del enfoque academico de Study Planner.
+Cuando se ejecuta, controla puntos como:
 
-El resultado queda disponible como artefacto del workflow `Autonomous Agent Review`.
+- que exista README e informe tecnico;
+- que se mencione el uso de IA;
+- que haya backend, base de datos y frontend;
+- que Docker y n8n esten documentados;
+- que la app mantenga el enfoque academico.
 
-## Checklist de entrega
+Para usarlo:
 
-- [ ] Repositorio publico creado.
-- [ ] Demo online publicada.
-- [ ] Base PostgreSQL configurada.
-- [ ] Variables `DATABASE_URL` y `JWT_SECRET` configuradas en el hosting.
-- [ ] Servicio web publicado en Render.
-- [ ] Docker probado localmente si se presenta como alternativa.
-- [ ] README completo.
-- [ ] Informe tecnico incluido.
-- [ ] Pipeline de CI ejecutado correctamente.
-- [ ] Agente autonomo ejecutado correctamente.
-- [ ] Ramas y pull requests de los 4 integrantes visibles en GitHub.
+```bash
+npm run agent
+```
+
+Si todo esta correcto, muestra un resumen con los controles aprobados.
+
+## Documentacion adicional
+
+- Informe tecnico: [`docs/informe-tecnico.md`](docs/informe-tecnico.md)
+- Guia de deploy: [`docs/deploy.md`](docs/deploy.md)
+- Integracion Hugo + n8n: [`docs/hugo-ia-n8n.md`](docs/hugo-ia-n8n.md)
+- Guia de trabajo colaborativo: [`docs/colaboracion.md`](docs/colaboracion.md)

@@ -1,118 +1,223 @@
 # Informe tecnico - Study Planner
 
-## Proyecto
+## 1. Introduccion
 
-Study Planner es una aplicacion full stack para organizar tareas academicas. El sistema permite registrar usuarios, iniciar sesion, guardar tareas en PostgreSQL, consultar una agenda, filtrar informacion y priorizar el estudio mediante un asistente inteligente basado en reglas explicables.
+Study Planner es una aplicacion full stack desarrollada como trabajo integrador para resolver un problema cotidiano de estudiantes: organizar tareas academicas, entregas, parciales y finales en una agenda clara, priorizada y facil de consultar.
 
-La identidad visual usa un buho academico como mascota. El asistente virtual de la app se llama Hugo y aparece en la interfaz como guia de recomendaciones de estudio.
+La idea central fue construir una herramienta util, no solamente una lista de tareas. Por eso el sistema incorpora calendario, filtros, estados, subtareas, progreso, notificaciones y un asistente virtual llamado Hugo, que ayuda a decidir que actividad conviene atender primero.
 
-## Herramientas de IA utilizadas
+## 2. Herramientas utilizadas
 
-- Codex / ChatGPT: analisis de consigna, ideacion del proyecto, definicion del alcance, generacion del prototipo, revision de documentacion y armado de checklist.
-- Prompts usados:
-  - "Lee y analiza el PDF de esta carpeta para pensar que hacer y hacer el integrador".
-  - "Dame ideas de proyectos viables para el integrador".
-  - "Como seria con el gestor de tareas?".
-  - "Que se llame Study Planner o algo asi".
-  - "Necesito frontend + backend Node/Express + PostgreSQL".
+### Herramientas de desarrollo
 
-## Como ayudo la IA
+- Visual Studio Code / entorno local de desarrollo.
+- Git y GitHub para versionado, ramas y publicacion del repositorio.
+- Node.js y npm para ejecutar el backend y validar el proyecto.
+- Docker y Docker Compose para levantar app, PostgreSQL y n8n de forma local.
+- PostgreSQL como base de datos relacional.
+- Render y Neon como alternativa de despliegue online.
+- n8n para automatizar recordatorios y preparar integraciones con IA.
 
-La IA ayudo a transformar una consigna amplia en una propuesta concreta y defendible: una herramienta para estudiantes que ordena tareas segun urgencia academica.
+### Herramientas de IA
 
-El proyecto evoluciono desde una app estatica hacia una arquitectura full stack con frontend, API REST propia, autenticacion y base PostgreSQL.
+- ChatGPT / Codex: apoyo principal durante el desarrollo.
+- Hugo: asistente virtual propio de Study Planner, integrado dentro de la app.
+- n8n: usado como puente para automatizaciones y para conectar Hugo con un flujo de IA mediante webhook.
 
-Tambien colaboro en la generacion de una interfaz responsive, la definicion de datos demo, la logica de persistencia local, el backend Express, el esquema de base de datos y el asistente de priorizacion.
+Durante el proceso, la IA se uso para analizar la consigna, planificar el alcance, proponer arquitectura, generar codigo, revisar errores, mejorar pantallas y escribir documentacion.
 
-Ademas, se incorporo un agente autonomo de revision del repositorio. Este agente se ejecuta en GitHub Actions y genera un informe automatico con controles sobre documentacion, archivos obligatorios, backend, base de datos y coherencia del asistente.
+## 3. Descripcion tecnica del sistema
 
-## Arquitectura
+Study Planner se organiza en tres grandes partes:
 
-El sistema se divide en:
+- Frontend: interfaz web construida con HTML, CSS y JavaScript vanilla.
+- Backend: API REST desarrollada con Node.js y Express.
+- Base de datos: PostgreSQL para guardar usuarios y tareas.
 
-- Frontend: HTML, CSS y JavaScript vanilla, con modulos para API, storage local, checklist, notificaciones, chatbot y utilidades de tareas.
-- Backend: Node.js con Express, rutas HTTP, servicios de dominio y repositorios de acceso a datos.
-- Base de datos: PostgreSQL.
-- Autenticacion: JWT con password hasheado mediante bcryptjs.
-- Persistencia alternativa: `localStorage` si el backend no esta disponible.
-- Despliegue: Render para la aplicacion y Neon para PostgreSQL.
-- Contenedores: Docker y Docker Compose como alternativa local.
+El usuario puede registrarse, iniciar sesion, crear tareas, agregar subtareas, filtrar la agenda, cambiar estados, eliminar actividades y consultar recomendaciones. Cada usuario ve solamente sus propias tareas gracias a la autenticacion con JWT.
 
-## Trabajo colaborativo
+La app tambien conserva un modo local con `localStorage` para que la experiencia no quede completamente bloqueada si el backend no esta disponible.
 
-El equipo trabaja con ramas por integrante para que el historial de GitHub muestre aportes individuales. La estrategia propuesta es:
+## 4. Arquitectura y componentes
 
-- `feature/frontend-ui`: interfaz, formularios, agenda y filtros.
-- `feature/backend-api`: rutas Express y CRUD de tareas.
-- `feature/database-auth`: esquema PostgreSQL, login, JWT y seguridad.
-- `feature/docs-deploy`: README, informe, CI, agente autonomo y despliegue.
+### Frontend
 
-Cada rama debe integrarse a `main` mediante Pull Request. Esto permite mostrar commits, revisiones y merges de cada integrante.
+El frontend esta dividido en archivos especificos para mantener orden:
 
-## Integracion de inteligencia
+- `frontend/index.html`: estructura principal de la app.
+- `frontend/styles.css`: entrada de estilos.
+- `frontend/css/`: estilos separados por base, landing, auth, app y responsive.
+- `frontend/app.js`: coordinacion principal de la interfaz.
+- `frontend/js/`: modulos de API, chatbot, calendario, fechas, storage, checklist, prioridad y utilidades.
 
-El asistente analiza cada tarea activa y calcula un puntaje de prioridad de 0 a 100. Para eso considera:
+La interfaz incluye:
 
-- Dias restantes hasta la fecha limite.
-- Dificultad declarada por el usuario.
-- Tipo de tarea: parcial, final, trabajo practico, lectura o exposicion.
-- Horas estimadas de trabajo.
-- Estado actual de avance.
+- Landing page de presentacion.
+- Registro e inicio de sesion.
+- Inicio con metricas y prioridades.
+- Nueva tarea.
+- Agenda con calendario completo, filtros y paginacion.
+- Detalle y edicion de tareas.
+- Asistente flotante Hugo.
 
-La decision es explicable: cada recomendacion informa por que conviene priorizar una tarea o dejarla para despues.
+### Backend
 
-## Backend, persistencia y despliegue
+El backend usa Express y separa responsabilidades:
 
-El backend expone una API REST:
+- `backend/routes/`: rutas HTTP.
+- `backend/services/`: reglas de negocio.
+- `backend/repositories/`: consultas SQL.
+- `backend/middleware/`: autenticacion y manejo de errores.
+- `backend/utils/`: validaciones, mapeos y helpers.
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/tasks`
-- `POST /api/tasks`
-- `PATCH /api/tasks/:id`
-- `DELETE /api/tasks/:id`
+Esto evita que toda la logica quede mezclada en un solo archivo y facilita mantener el proyecto.
 
-La base PostgreSQL tiene dos tablas:
+### Base de datos
 
-- `users`: usuarios registrados con password hasheado.
-- `tasks`: tareas asociadas a cada usuario.
+El esquema principal esta en `db/schema.sql`.
 
-Cada consulta de tareas se filtra por el usuario autenticado, evitando que un usuario acceda a datos de otro.
+Tablas principales:
 
-La logica principal de tareas no queda mezclada en las rutas: las rutas se encargan de HTTP, los servicios normalizan y coordinan reglas de negocio, los repositorios concentran SQL, y el mapper de tareas agrega la prioridad calculada por el backend. El frontend mantiene la misma regla de prioridad para el modo local sin base de datos.
+- `users`: guarda id, nombre, email, password hasheado y fecha de creacion.
+- `tasks`: guarda tareas academicas asociadas a un usuario.
 
-Para el despliegue se usa Render como Web Service Node.js. La base PostgreSQL se aloja en Neon y se conecta al backend mediante la variable de entorno `DATABASE_URL`.
+Cada tarea contiene titulo, tipo, fecha limite, hora opcional, descripcion, subtareas, dificultad y estado.
 
-Como alternativa de ejecucion local, se agrego Docker Compose con dos servicios: uno para la app Node/Express y otro para PostgreSQL.
+## 5. Sinergia con la IA
 
-## Agente autonomo del repositorio
+La IA ayudo principalmente en cinco momentos del proyecto.
 
-El archivo `scripts/repo-agent.js` implementa un agente de calidad que colabora con el proyecto sin intervencion manual. En cada push o pull request, el workflow `Autonomous Agent Review` ejecuta el agente y sube un informe como artefacto.
+### 5.1 Interpretacion de la consigna
 
-Este agente cumple una funcion autonoma y verificable: revisar que la entrega mantenga los elementos pedidos por la consigna, incluyendo backend, base de datos, documentacion y asistente de priorizacion.
+La consigna era amplia y permitia varias soluciones. La IA ayudo a convertir esa consigna en un producto concreto: una agenda academica inteligente para estudiantes.
 
-## Desafios encontrados
+En lugar de hacer una app generica de tareas, se definio un enfoque academico:
 
-- Definir un alcance realista para dos semanas de desarrollo.
-- Pasar de app estatica a arquitectura full stack sin perder simplicidad.
-- Evitar guardar passwords en texto plano.
-- Mantener separadas las tareas por usuario.
-- Documentar claramente el uso de IA sin exagerar capacidades.
-- Sumar backend sin romper la posibilidad de usar la app en modo local.
+- parciales;
+- finales;
+- trabajos practicos;
+- lecturas;
+- exposiciones;
+- prioridades segun fecha, dificultad y progreso.
 
-## Lecciones aprendidas
+### 5.2 Diseno de arquitectura
 
-- La IA es especialmente util para convertir una consigna abierta en tareas concretas.
-- Conviene pedir soluciones desplegables y verificables, no solo ideas.
-- Los modelos aceleran la implementacion, pero requieren supervision para mantener coherencia, seguridad y claridad.
-- JWT y hashing de passwords son necesarios cuando se implementa autenticacion propia.
-- Una app pequena, terminada y documentada suele ser mejor entrega que una arquitectura grande incompleta.
+La IA ayudo a separar el proyecto en frontend, backend, base de datos, documentacion, Docker y automatizaciones. Tambien sugirio una estructura con servicios y repositorios para no dejar toda la logica en las rutas Express.
 
-## Posibles mejoras
+Esta decision hizo que el proyecto quedara mas prolijo y defendible tecnicamente.
 
-- Agregar refresh tokens.
-- Agregar recuperacion de password.
-- Exportar la agenda a CSV.
-- Agregar calendario mensual.
-- Incorporar recordatorios por email.
-- Reemplazar el asistente basado en reglas por un modelo LLM con clave configurable.
+### 5.3 Programacion
+
+La IA colaboro en:
+
+- crear formularios y vistas del frontend;
+- modularizar JavaScript;
+- implementar autenticacion con JWT;
+- conectar PostgreSQL;
+- construir el CRUD de tareas;
+- agregar filtros, paginacion y calendario;
+- implementar el asistente Hugo;
+- preparar workflows de n8n;
+- mejorar estilos y responsive.
+
+El codigo generado siempre requirio revision y ajustes, especialmente en detalles visuales, nombres de campos, validaciones y comportamiento de la interfaz.
+
+### 5.4 Depuracion
+
+La IA fue util para revisar errores de sintaxis, problemas de integracion y diferencias entre modo local, Docker y backend publicado. Tambien ayudo a detectar casos donde una solucion funcionaba en frontend pero necesitaba soporte real en backend o base de datos.
+
+Ejemplos:
+
+- agregar `name` al registro de usuario y al esquema SQL;
+- mantener compatibilidad con usuarios existentes;
+- validar que los filtros de agenda no rompieran el ordenamiento;
+- evitar que la paginacion mostrara tareas fuera de pagina;
+- revisar que `npm run check` siguiera pasando.
+
+### 5.5 Testing y validacion
+
+La IA ayudo a definir una validacion minima pero importante:
+
+- ejecutar `npm run check`;
+- revisar rutas principales;
+- confirmar que los textos pedidos aparezcan o desaparezcan;
+- verificar que el README y el informe mencionen IA, tecnologia y puesta en marcha;
+- mantener un agente de revision en `scripts/repo-agent.js`.
+
+## 6. Integracion de Hugo e IA
+
+Hugo es el asistente virtual de Study Planner. En el frontend responde consultas sobre:
+
+- que tarea hacer primero;
+- que vence esta semana;
+- como va el progreso;
+- que tarea tiene mas riesgo;
+- como crear o buscar tareas.
+
+Hugo tiene una respuesta local basada en reglas, para que funcione sin depender de servicios externos. Ademas, el backend incluye `POST /api/hugo/chat`, que permite enviar el mensaje y las tareas actuales a un webhook de n8n. De esta forma, el proyecto queda preparado para conectar un modelo de IA sin exponer claves en el navegador.
+
+## 7. Automatizaciones con n8n
+
+n8n se uso como herramienta de automatizacion. El proyecto incluye workflows para:
+
+- consultar tareas que vencen pronto;
+- preparar recordatorios por email;
+- conectar Hugo con un flujo externo mediante webhook.
+
+Esto suma valor porque la app no queda limitada a una pantalla: tambien puede avisar al usuario cuando una entrega esta cerca.
+
+## 8. Lecciones Aprendidas
+
+### 8.1 La IA acelera, pero no reemplaza la revision
+
+La IA puede generar codigo rapido, pero no siempre entiende todos los detalles del proyecto. Fue necesario revisar nombres, rutas, estilos, validaciones y compatibilidad con la base de datos.
+
+### 8.2 Pedir cambios concretos da mejores resultados
+
+Los mejores avances aparecieron cuando las instrucciones fueron especificas: que texto cambiar, que vista modificar, como ordenar una tarjeta o que filtros agregar.
+
+### 8.3 La arquitectura importa aunque el proyecto sea chico
+
+Separar rutas, servicios, repositorios y utilidades hizo que el backend fuera mas claro. En el frontend, separar modulos tambien ayudo a mantener el crecimiento de la app.
+
+### 8.4 Docker reduce problemas de entorno
+
+El proyecto usa PostgreSQL y n8n, por lo que Docker Compose simplifica mucho la ejecucion local. Sin Docker, cada integrante tendria que instalar y configurar varias herramientas.
+
+### 8.5 Documentar tambien es parte del desarrollo
+
+El README y este informe no son accesorios: explican como ejecutar, que tecnologias se usaron y como intervino la IA. Para una entrega academica, esa claridad es tan importante como el codigo.
+
+## 9. Desafios encontrados
+
+- Definir un alcance posible sin hacer una app demasiado grande.
+- Mantener la interfaz simple aunque tenga calendario, filtros, metricas y asistente.
+- Integrar autenticacion, base de datos y modo local sin romper la experiencia.
+- Lograr que Hugo sea util sin depender obligatoriamente de una API externa.
+- Ordenar el trabajo en ramas y commits claros.
+- Evitar que la IA genere cambios desconectados del estilo visual existente.
+- Escribir documentacion clara, honesta y presentable.
+
+## 10. Resultado final
+
+El resultado es una aplicacion full stack funcional, con identidad propia, backend real, base de datos, Docker, automatizaciones y documentacion. Study Planner no solo permite cargar tareas: ayuda a decidir que estudiar primero y muestra el estado academico de forma clara.
+
+El proyecto queda preparado para presentarse, ejecutarse localmente y evolucionar con mejoras futuras.
+
+## 11. Posibles mejoras futuras
+
+- Recuperacion de password.
+- Exportacion de tareas a CSV o PDF.
+- Notificaciones push reales.
+- Integracion final con un modelo LLM desde n8n.
+- Roles de usuario.
+- Estadisticas semanales de rendimiento.
+- Sincronizacion con Google Calendar.
+
+## 12. Comandos de validacion usados
+
+```bash
+npm run check
+```
+
+Este comando revisa sintaxis de backend, frontend y scripts. Fue usado como validacion principal antes de cerrar cambios.
