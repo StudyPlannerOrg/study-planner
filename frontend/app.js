@@ -296,9 +296,16 @@ authForm.addEventListener("submit", async (event) => {
   render();
 });
 
-signOutButton.addEventListener("click", () => {
-  closeSession();
-});
+document.addEventListener(
+  "click",
+  (event) => {
+    if (!event.target.closest("#sign-out")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeSession("", { reload: true });
+  },
+  true
+);
 
 search.addEventListener("input", () => {
   currentPage = 1;
@@ -605,7 +612,7 @@ function loadLocalMode() {
   render();
 }
 
-function closeSession(message = "") {
+function closeSession(message = "", options = {}) {
   const chatKey = getChatStorageKey(CHAT_KEY, currentUser);
   token = null;
   currentUser = null;
@@ -626,6 +633,7 @@ function closeSession(message = "") {
   updateSessionUi();
   render();
   showLanding();
+  if (options.reload) window.location.replace("/");
 }
 
 function refreshSessionActivity() {
