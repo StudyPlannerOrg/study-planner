@@ -9,6 +9,10 @@ const requiredFiles = [
   "frontend/app.js",
   "frontend/assets/hugo-mascot.png",
   "backend/server.js",
+  "backend/constants/taskOptions.js",
+  "backend/services/taskService.js",
+  "backend/services/priorityService.js",
+  "backend/repositories/taskRepository.js",
   "package.json",
   "Dockerfile",
   "docker-compose.yml",
@@ -22,6 +26,8 @@ const requiredFiles = [
   "docs/informe-tecnico.md",
   ".github/workflows/ci.yml",
   ".github/workflows/agent-review.yml",
+  "n8n/workflows/local/avisos-por-vencimiento.local.json",
+  "n8n/workflows/online/avisos-por-vencimiento.online.json",
 ];
 
 const checks = [
@@ -50,8 +56,13 @@ const checks = [
   },
   {
     name: "Backend Express",
-    run: () => read("backend/server.js").includes("express") && read("backend/server.js").includes("/api/tasks") && read("backend/routes/auth.js").includes("jsonwebtoken"),
-    detail: "Verifica que exista API REST propia con autenticacion JWT.",
+    run: () =>
+      read("backend/server.js").includes("express") &&
+      read("backend/server.js").includes("/api/tasks") &&
+      read("backend/routes/auth.js").includes("jsonwebtoken") &&
+      read("backend/services/taskService.js").includes("normalizeTask") &&
+      read("backend/repositories/taskRepository.js").includes("select"),
+    detail: "Verifica que exista API REST propia con autenticacion JWT, servicios y repositorios.",
   },
   {
     name: "Base PostgreSQL",
@@ -75,8 +86,20 @@ const checks = [
   },
   {
     name: "Asistente de priorizacion",
-    run: () => read("frontend/app.js").includes("calculatePriorityScore") && read("frontend/app.js").includes("explainPriority"),
-    detail: "La app debe tener una logica explicable de recomendacion.",
+    run: () =>
+      read("frontend/js/priority.js").includes("calculatePriorityScore") &&
+      read("frontend/js/priority.js").includes("explainPriority") &&
+      read("backend/services/priorityService.js").includes("calculatePriorityScore") &&
+      read("backend/utils/taskMapper.js").includes("priority"),
+    detail: "La app debe tener una logica explicable de recomendacion y respaldo en backend.",
+  },
+  {
+    name: "Workflows n8n",
+    run: () =>
+      read("n8n/workflows/local/avisos-por-vencimiento.local.json").includes("http://app:3000/api/tasks/due-reminders") &&
+      read("n8n/workflows/online/avisos-por-vencimiento.online.json").includes("https://") &&
+      read("n8n/workflows/online/avisos-por-vencimiento.online.json").includes("/api/tasks/due-reminders"),
+    detail: "Verifica que existan workflows separados para local y online.",
   },
   {
     name: "Interfaz academica",
