@@ -1,4 +1,6 @@
 import { apiRequest as requestApiRaw, askHugoAi, checkApiHealth } from "./js/api.js";
+import { getFilteredTasks as filterAgendaTasks, getPaginatedTasks, renderPagination, resetAgendaFilters } from "./js/agenda.js";
+import { renderCalendars as renderCalendarViews } from "./js/calendar.js";
 import { buildHugoReply, renderRecommendations as renderChatbotRecommendations } from "./js/chatbot.js";
 import {
   addChecklistRow,
@@ -11,29 +13,31 @@ import {
   updateChecklistProgress,
 } from "./js/checklist.js";
 import { CHAT_KEY, STORAGE_KEY, TOKEN_KEY, USER_KEY } from "./js/config.js";
+import { renderFocus as renderDashboardFocus, renderMetrics as renderDashboardMetrics } from "./js/dashboard.js";
 import { demoTasks } from "./js/demoTasks.js";
-import { daysUntil, formatDate, normalizeDateValue, todayOffset } from "./js/dates.js";
-import { escapeHtml, readJson } from "./js/helpers.js";
+import { normalizeDateValue, todayOffset } from "./js/dates.js";
+import { readJson } from "./js/helpers.js";
+import {
+  clearChatHistory as removeChatHistory,
+  getChatStorageKey,
+  loadChatHistory as readChatHistory,
+  persistChatHistory as saveChatHistory,
+} from "./js/chatHistory.js";
+import { createHugoActionHandler } from "./js/hugoActions.js";
+import { prepareDayModal, prepareMetricModal } from "./js/modals.js";
 import {
   buildNotifications,
   renderNotifications as renderNotificationList,
   requestBrowserNotifications as requestNativeNotifications,
 } from "./js/notifications.js";
-import { calculatePriorityScore } from "./js/priority.js";
 import { loadLocalTasks as loadStoredTasks, persistLocalTasks } from "./js/storage.js";
+import { renderTaskCards } from "./js/taskCards.js";
 import {
   collectTaskForm,
-  formatDateTime,
   formatProgress,
-  formatTaskSubtitle,
   getChecklistProgress,
   getNextStatus,
-  getPriorityClass,
-  getTaskStateClass,
-  matchesMetricFilter,
   normalizeTaskDates,
-  renderChecklistPreview,
-  sortForView,
   sortTasks,
 } from "./js/taskUtils.js";
 
@@ -55,13 +59,19 @@ const agendaCalendarGrid = document.querySelector("#agenda-calendar-grid");
 const calendarPrev = document.querySelector("#calendar-prev");
 const calendarNext = document.querySelector("#calendar-next");
 const search = document.querySelector("#search");
+const statusFilter = document.querySelector("#status-filter");
 const difficultyFilter = document.querySelector("#difficulty-filter");
+const dateFilter = document.querySelector("#date-filter");
 const sortFilter = document.querySelector("#sort-filter");
+const clearFilters = document.querySelector("#clear-filters");
+const pagination = document.querySelector("#pagination");
 const authForm = document.querySelector("#auth-form");
 const authTitle = document.querySelector("#auth-title");
 const authCopy = document.querySelector("#auth-copy");
 const authSubmit = document.querySelector("#auth-submit");
 const authSwitch = document.querySelector("#auth-switch");
+const authNameField = document.querySelector("#auth-name-field");
+const dashboardGreeting = document.querySelector("#dashboard-greeting");
 const signOutButton = document.querySelector("#sign-out");
 const storageStatus = document.querySelector("#storage-status");
 const notificationToggle = document.querySelector("#notification-toggle");
@@ -84,6 +94,34 @@ const dayModalTasks = document.querySelector("#day-modal-tasks");
 const dayModalAdd = document.querySelector("#day-modal-add");
 const dayModalClose = document.querySelector("#day-modal-close");
 
+const agendaFilters = {
+  search,
+  status: statusFilter,
+  difficulty: difficultyFilter,
+  date: dateFilter,
+  sort: sortFilter,
+};
+
+const calendarElements = {
+  calendarTitle,
+  calendarGrid,
+  agendaCalendarTitle,
+  agendaCalendarGrid,
+};
+
+const metricElements = {
+  total: document.querySelector("#metric-total"),
+  urgent: document.querySelector("#metric-urgent"),
+  week: document.querySelector("#metric-week"),
+  pending: document.querySelector("#metric-pending"),
+};
+
+const modalElements = {
+  title: dayModalTitle,
+  tasks: dayModalTasks,
+  addButton: dayModalAdd,
+};
+
 const SESSION_LAST_ACTIVITY_KEY = "studyplanner.lastActivity";
 const BROWSER_NOTIFICATION_KEY = "studyplanner.browserNotificationsSent";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000;
@@ -99,10 +137,22 @@ let activeView = "dashboard";
 let selectedTaskId = null;
 let sessionTimer = null;
 let metricFilter = "all";
+let currentPage = 1;
 let calendarMonth = new Date();
 let selectedCalendarDate = "";
 let modalMode = "day";
 let chatMessages = [];
+let notificationsViewed = false;
+let notificationSignature = "";
+
+const executeHugoAction = createHugoActionHandler({
+  form,
+  taskChecklist,
+  openTaskDetail,
+  renderChecklistEditor,
+  setView,
+  todayOffset,
+});
 
 init();
 
@@ -151,7 +201,12 @@ chatbotResize.addEventListener("click", () => {
 });
 
 notificationToggle.addEventListener("click", () => {
+  const willOpen = notificationPanel.classList.contains("hidden");
   notificationPanel.classList.toggle("hidden");
+  if (willOpen) {
+    notificationsViewed = true;
+    renderNotifications();
+  }
 });
 
 browserNotifications.addEventListener("click", async () => {
@@ -214,12 +269,15 @@ authForm.addEventListener("submit", async (event) => {
   }
 
   const data = new FormData(authForm);
+  const payload = {
+    email: data.get("email").trim(),
+    password: data.get("password"),
+  };
+  if (authAction === "register") payload.name = data.get("name").trim();
+
   const response = await requestApi(`/api/auth/${authAction}`, {
     method: "POST",
-    body: JSON.stringify({
-      email: data.get("email").trim(),
-      password: data.get("password"),
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response) return;
@@ -242,9 +300,39 @@ signOutButton.addEventListener("click", () => {
   closeSession();
 });
 
-search.addEventListener("input", render);
-difficultyFilter.addEventListener("change", render);
-sortFilter.addEventListener("change", render);
+search.addEventListener("input", () => {
+  currentPage = 1;
+  render();
+});
+difficultyFilter.addEventListener("change", () => {
+  currentPage = 1;
+  render();
+});
+statusFilter.addEventListener("change", () => {
+  currentPage = 1;
+  render();
+});
+dateFilter.addEventListener("change", () => {
+  currentPage = 1;
+  render();
+});
+sortFilter.addEventListener("change", () => {
+  currentPage = 1;
+  render();
+});
+clearFilters.addEventListener("click", () => {
+  resetAgendaFilters(agendaFilters);
+  metricFilter = "all";
+  currentPage = 1;
+  render();
+});
+
+pagination.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-page]");
+  if (!button) return;
+  currentPage = Number(button.dataset.page);
+  render();
+});
 
 document.querySelectorAll("[data-metric-filter]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -310,6 +398,7 @@ dayModal.addEventListener("click", (event) => {
 dayModalAdd.addEventListener("click", () => {
   if (modalMode === "metric") {
     metricFilter = dayModalAdd.dataset.metricFilter || "all";
+    currentPage = 1;
     closeDayModal();
     setView("agenda");
     render();
@@ -467,6 +556,8 @@ function setAuthMode(action) {
     : "Ingresa con tu cuenta para continuar al panel.";
   authSubmit.textContent = isRegister ? "Crear cuenta" : "Ingresar";
   authSwitch.textContent = isRegister ? "Ya tengo cuenta" : "Crear cuenta";
+  authNameField.classList.toggle("hidden", !isRegister);
+  authForm.elements.name.required = isRegister;
 }
 
 function setView(view) {
@@ -478,6 +569,8 @@ function setView(view) {
     button.classList.toggle("active", button.dataset.view === view);
   });
   sidebar.classList.remove("open");
+  notificationPanel.classList.add("hidden");
+  syncViewChrome();
 }
 
 function updateSessionUi() {
@@ -489,10 +582,12 @@ function updateSessionUi() {
 
   if (!token || !currentUser) {
     storageStatus.textContent = "Servicio listo";
+    dashboardGreeting.textContent = "Hola, organicemos lo importante";
     return;
   }
 
   storageStatus.textContent = "Cuenta activa";
+  dashboardGreeting.textContent = `Hola, ${getUserDisplayName()}!`;
 }
 
 function isCloudMode() {
@@ -511,7 +606,7 @@ function loadLocalMode() {
 }
 
 function closeSession(message = "") {
-  const chatKey = getChatStorageKey();
+  const chatKey = getChatStorageKey(CHAT_KEY, currentUser);
   token = null;
   currentUser = null;
   tasks = [];
@@ -576,53 +671,17 @@ function updateEditChecklistProgress() {
 function openDayModal(date) {
   modalMode = "day";
   selectedCalendarDate = date;
-  const dayTasks = sortTasks(tasks.filter((task) => normalizeDateValue(task.dueDate) === date));
-  dayModalTitle.textContent = formatDate(date);
-  dayModalAdd.textContent = "Agregar tarea en este dia";
-  dayModalAdd.dataset.metricFilter = "";
-  dayModalTasks.innerHTML = dayTasks.length
-    ? dayTasks
-        .map(
-          (task) => `
-            <button class="modal-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-modal-task="${task.id}">
-              <strong>${escapeHtml(task.title)}</strong>
-              <span>${escapeHtml(task.type)} - ${task.status}</span>
-            </button>
-          `
-        )
-        .join("")
-    : `<div class="empty-state compact-empty">No hay tareas para este dia.</div>`;
+  prepareDayModal(modalElements, tasks, date);
   dayModal.classList.remove("hidden");
 }
 
 function openMetricModal(filter) {
   modalMode = "metric";
-  const labels = {
-    active: "Tareas activas",
-    urgent: "Tareas urgentes",
-    week: "Vencen esta semana",
-    pending: "Tareas pendientes",
-  };
   const previousFilter = metricFilter;
   metricFilter = filter;
-  const metricTasks = getFilteredTasks();
+  const metricTasks = filterAgendaTasks(tasks, agendaFilters, metricFilter);
   metricFilter = previousFilter;
-  dayModalTitle.textContent = labels[filter] || "Tareas";
-  dayModalAdd.textContent = "Ver en agenda";
-  dayModalAdd.dataset.metricFilter = filter;
-  dayModalTasks.innerHTML = metricTasks.length
-    ? metricTasks
-        .slice(0, 6)
-        .map(
-          (task) => `
-            <button class="modal-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-modal-task="${task.id}">
-              <strong>${escapeHtml(task.title)}</strong>
-              <span>${formatDate(task.dueDate)} - ${task.status}</span>
-            </button>
-          `
-        )
-        .join("")
-    : `<div class="empty-state compact-empty">No hay tareas en este grupo.</div>`;
+  prepareMetricModal(modalElements, metricTasks, filter);
   dayModal.classList.remove("hidden");
 }
 
@@ -635,7 +694,13 @@ function getCurrentNotifications() {
 }
 
 function renderNotifications() {
-  renderNotificationList({ count: notificationCount, list: notificationList }, getCurrentNotifications());
+  const notifications = getCurrentNotifications();
+  const nextSignature = notifications.map((item) => item.id).join("|");
+  if (nextSignature !== notificationSignature) {
+    notificationSignature = nextSignature;
+    notificationsViewed = false;
+  }
+  renderNotificationList({ count: notificationCount, list: notificationList }, notifications, { viewed: notificationsViewed });
 }
 
 async function requestBrowserNotifications() {
@@ -653,7 +718,7 @@ async function sendHugoMessage(text) {
   chatbotInput.value = "";
   renderRecommendations();
 
-  const localAction = executeHugoAction(message);
+  const localAction = executeHugoAction(message, tasks);
   const localReply = buildHugoReply(message, tasks, { formatProgress, sortTasks });
   let reply = localAction?.reply || localReply;
   let source = "local";
@@ -736,253 +801,54 @@ function render() {
   renderNotifications();
   renderCalendars();
   renderFocus();
-  renderTasks(getFilteredTasks());
+  const filteredTasks = filterAgendaTasks(tasks, agendaFilters, metricFilter);
+  const paginated = getPaginatedTasks(filteredTasks, currentPage);
+  currentPage = paginated.page;
+  renderTaskCards(list, paginated.items);
+  renderPagination(pagination, paginated.totalPages, currentPage);
   renderRecommendations();
 }
 
-function getFilteredTasks() {
-  const query = search.value.trim().toLowerCase();
-  const difficulty = difficultyFilter.value;
-
-  const filtered = tasks.filter((task) => {
-    const matchesDifficulty = difficulty === "Todas" || task.difficulty === difficulty;
-    const checklistText = (task.checklist || []).map((item) => item.text).join(" ");
-    const text = `${task.title} ${task.type} ${task.notes || ""} ${checklistText}`.toLowerCase();
-    return matchesDifficulty && matchesMetricFilter(task, metricFilter) && text.includes(query);
-  });
-
-  return sortForView(filtered, sortFilter.value);
-}
-
 function renderMetrics() {
-  const active = tasks.filter((task) => task.status !== "Terminada");
-  const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
-  const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
-  const pending = tasks.filter((task) => task.status === "Pendiente");
-
-  document.querySelector("#metric-total").textContent = active.length;
-  document.querySelector("#metric-urgent").textContent = urgent.length;
-  document.querySelector("#metric-week").textContent = week.length;
-  document.querySelector("#metric-pending").textContent = pending.length;
+  renderDashboardMetrics(tasks, metricElements);
 }
 
 function renderCalendars() {
-  const today = new Date();
-  const year = calendarMonth.getFullYear();
-  const month = calendarMonth.getMonth();
-  const monthName = calendarMonth.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-  const firstDay = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const offset = (firstDay.getDay() + 6) % 7;
-  const title = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-
-  calendarTitle.textContent = title;
-  agendaCalendarTitle.textContent = title;
-
-  const miniCells = ["L", "M", "M", "J", "V", "S", "D"].map((day) => `<div class="calendar-weekday">${day}</div>`);
-  const agendaCells = [...miniCells];
-  for (let i = 0; i < offset; i += 1) {
-    miniCells.push(`<div class="calendar-day muted-day"></div>`);
-    agendaCells.push(`<div class="calendar-day muted-day"></div>`);
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const dayTasks = sortTasks(tasks.filter((task) => normalizeDateValue(task.dueDate) === dateKey));
-    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-    const pending = dayTasks.filter((task) => task.status !== "Terminada").length;
-    const done = dayTasks.length - pending;
-    const taskDots = dayTasks.slice(0, 4);
-
-    miniCells.push(`
-      <button class="calendar-day ${isToday ? "today" : ""}" type="button" data-calendar-date="${dateKey}">
-        <strong>${day}</strong>
-        ${
-          taskDots.length
-            ? `<span class="mini-task-dots" aria-label="${dayTasks.length} tareas">${taskDots
-                .map((task) => `<i class="${getPriorityClass(task)} ${getTaskStateClass(task)}"></i>`)
-                .join("")}</span>`
-            : ""
-        }
-      </button>
-    `);
-
-    agendaCells.push(`
-      <div class="calendar-day agenda-day ${isToday ? "today" : ""} ${done && !pending ? "completed-day" : ""}" data-calendar-date="${dateKey}">
-        <button class="day-number" type="button" data-calendar-date="${dateKey}">${day}</button>
-        <div class="calendar-task-list">
-          ${dayTasks
-            .slice(0, 3)
-            .map(
-              (task) => `
-                <button class="calendar-task ${getPriorityClass(task)} ${getTaskStateClass(task)}" type="button" data-calendar-task="${task.id}">
-                  ${escapeHtml(task.title)}
-                </button>
-              `
-            )
-            .join("")}
-          ${dayTasks.length > 3 ? `<span class="calendar-more">+${dayTasks.length - 3}</span>` : ""}
-        </div>
-        ${(pending || done) ? `<small>${pending} pend. / ${done} hechas</small>` : ""}
-      </div>
-    `);
-  }
-
-  calendarGrid.innerHTML = miniCells.join("");
-  agendaCalendarGrid.innerHTML = agendaCells.join("");
+  renderCalendarViews(calendarElements, tasks, calendarMonth);
 }
 
 function renderFocus() {
-  const active = sortTasks(tasks.filter((task) => task.status !== "Terminada")).slice(0, 3);
-
-  if (!active.length) {
-    focusList.innerHTML = `<div class="empty-state">No hay tareas activas. Crea una para empezar.</div>`;
-    return;
-  }
-
-  focusList.innerHTML = active
-    .map((task) => {
-      const priority = getPriorityClass(task);
-      return `
-        <article class="focus-item" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Abrir ${escapeHtml(task.title)}">
-          <div>
-            <strong>${escapeHtml(task.title)}</strong>
-            <span>${formatTaskSubtitle(task)}</span>
-          </div>
-          <b>${formatProgress(task)}</b>
-        </article>
-      `;
-    })
-    .join("");
-}
-
-function renderTasks(items) {
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">No hay tareas para los filtros seleccionados.</div>`;
-    return;
-  }
-
-  list.innerHTML = items
-    .map((task) => {
-      const priority = getPriorityClass(task);
-      return `
-        <article class="task-card ${getTaskStateClass(task)}" data-priority="${priority}" data-id="${task.id}" tabindex="0" role="button" aria-label="Ver o editar ${escapeHtml(task.title)}">
-          <div class="task-main">
-            <div>
-              <strong>${escapeHtml(task.title)}</strong>
-              <div class="task-meta">
-                <span>${formatDateTime(task)}</span>
-                <span>${escapeHtml(task.type)}</span>
-              </div>
-            </div>
-            <span class="tag ${priority}">${priority}</span>
-          </div>
-          ${task.notes ? `<p>${escapeHtml(task.notes)}</p>` : ""}
-          ${renderChecklistPreview(task)}
-          <div class="task-actions">
-            <span>Dificultad: ${task.difficulty}</span>
-            <button class="status-button" data-action="status" data-id="${task.id}">Estado: ${task.status}</button>
-          </div>
-          <button class="small-button danger-button task-delete" data-action="delete" data-id="${task.id}">Eliminar</button>
-        </article>
-      `;
-    })
-    .join("");
+  renderDashboardFocus(focusList, tasks);
 }
 
 function renderRecommendations() {
   renderChatbotRecommendations(recommendations, tasks, chatMessages, { formatProgress });
 }
 
-function executeHugoAction(message) {
-  const normalized = normalizeChatText(message);
-
-  if (includesAny(normalized, ["crear tarea", "nueva tarea", "agregar tarea", "cargar tarea", "crear una tarea", "agregar una tarea"])) {
-    form.reset();
-    form.dueDate.value = todayOffset(1);
-    renderChecklistEditor(taskChecklist, []);
-    setView("task");
-    return { reply: "Te abri el formulario de nueva tarea. Completa titulo, fecha limite, tipo y dificultad; despues toca Crear tarea." };
-  }
-
-  if (includesAny(normalized, ["ver agenda", "abrir agenda", "ir a agenda", "agenda completa"])) {
-    setView("agenda");
-    return { reply: "Te abri la agenda completa. Desde ahi podes buscar, filtrar y abrir cualquier tarea para editarla." };
-  }
-
-  if (includesAny(normalized, ["ir al inicio", "ver inicio", "abrir inicio", "dashboard", "panel"])) {
-    setView("dashboard");
-    return { reply: "Te lleve al panel principal. Ahi ves metricas, foco proximo, calendario y acciones rapidas." };
-  }
-
-  if (includesAny(normalized, ["editar", "modificar", "cambiar", "eliminar", "borrar"])) {
-    const task = findTaskMention(message);
-    if (task) {
-      openTaskDetail(task.id);
-      const deleteIntent = includesAny(normalized, ["eliminar", "borrar"]);
-      return {
-        reply: deleteIntent
-          ? `Te abri "${task.title}". Para eliminarla, toca el boton Eliminar y confirma la accion.`
-          : `Te abri "${task.title}" para editarla. Cambia los datos que necesites y toca Guardar tarea.`,
-      };
-    }
-
-    setView("agenda");
-    return {
-      reply:
-        "Te abri la agenda para que elijas la tarea. Entra a una tarjeta para editarla; si queres eliminarla, usa el boton Eliminar dentro de esa tarea.",
-    };
-  }
-
-  return null;
-}
-
-function findTaskMention(message) {
-  const normalized = normalizeChatText(message);
-  return tasks.find((task) => {
-    const title = normalizeChatText(task.title || "");
-    return title && normalized.includes(title);
-  });
-}
-
-function includesAny(text, options) {
-  return options.some((option) => text.includes(option));
-}
-
-function normalizeChatText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function getChatStorageKey() {
-  return `${CHAT_KEY}.${currentUser?.id || "local"}`;
-}
-
-function loadChatHistory() {
-  const stored = readJson(getChatStorageKey());
-  if (!stored || !Array.isArray(stored.messages) || Date.now() - Number(stored.updatedAt || 0) > CHAT_TIMEOUT_MS) {
-    chatMessages = [];
-    clearChatHistory();
+function syncViewChrome() {
+  const isDashboard = activeView === "dashboard";
+  document.querySelector("#dashboard").classList.toggle("hidden", !isDashboard);
+  if (!isDashboard) {
+    sidebar.classList.add("collapsed");
+    appShell.classList.add("sidebar-collapsed");
     return;
   }
 
-  chatMessages = stored.messages
-    .filter((message) => message && (message.from === "user" || message.from === "bot") && typeof message.text === "string")
-    .slice(-10);
+  sidebar.classList.remove("collapsed");
+  appShell.classList.remove("sidebar-collapsed");
+}
+
+function getUserDisplayName() {
+  const name = String(currentUser?.name || "").trim();
+  if (name) return name.split(" ")[0];
+  const emailName = String(currentUser?.email || "").split("@")[0];
+  return emailName || "organicemos lo importante";
+}
+
+function loadChatHistory() {
+  chatMessages = readChatHistory(CHAT_KEY, currentUser, CHAT_TIMEOUT_MS, readJson, removeChatHistory);
 }
 
 function persistChatHistory() {
-  localStorage.setItem(
-    getChatStorageKey(),
-    JSON.stringify({
-      updatedAt: Date.now(),
-      messages: chatMessages.filter((message) => !message.thinking).slice(-10),
-    })
-  );
-}
-
-function clearChatHistory(key = getChatStorageKey()) {
-  localStorage.removeItem(key);
+  saveChatHistory(CHAT_KEY, currentUser, chatMessages);
 }

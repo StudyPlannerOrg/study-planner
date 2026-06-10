@@ -194,6 +194,10 @@
           <p id="auth-copy">Ingresa con tu cuenta para continuar al panel.</p>
         </div>
         <form class="auth-form" id="auth-form">
+          <label class="auth-name-field hidden" id="auth-name-field">
+            Nombre
+            <input name="name" type="text" placeholder="Ej: Martina" autocomplete="given-name" maxlength="80" />
+          </label>
           <label>
             Email
             <input name="email" type="email" placeholder="tu-email@ejemplo.com" autocomplete="email" required />
@@ -222,9 +226,9 @@
         </div>
 
         <nav class="nav-list" aria-label="Navegacion principal">
-          <button class="active" type="button" data-view="dashboard" data-short="I">Inicio</button>
-          <button type="button" data-view="task" data-short="+">Nueva tarea</button>
-          <button type="button" data-view="agenda" data-short="A">Agenda</button>
+          <button class="active" type="button" data-view="dashboard">Inicio</button>
+          <button type="button" data-view="task">Nueva tarea</button>
+          <button type="button" data-view="agenda">Agenda</button>
         </nav>
 
         <div class="sidebar-note">
@@ -237,8 +241,8 @@
         <header class="topbar" id="dashboard">
           <button class="icon-button menu-button" id="mobile-menu" type="button" aria-label="Abrir menu">&#9776;</button>
           <div>
-            <p class="eyebrow">Panel de trabajo</p>
-            <h1>Hola, organicemos lo importante</h1>
+            <p class="eyebrow">Inicio</p>
+            <h1 id="dashboard-greeting">Hola, organicemos lo importante</h1>
           </div>
           <div class="topbar-actions">
             <button class="ghost-button notification-toggle" id="notification-toggle" type="button">
@@ -310,11 +314,10 @@
         </section>
 
         <section class="view-section hidden" id="view-task">
+          <button class="ghost-button back-button section-back-button" type="button" data-back>Volver</button>
           <form class="panel task-page-form" id="task-form">
-            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading" id="nueva-tarea">
-              <p class="eyebrow">Nueva tarea</p>
-              <h2>Carga una actividad academica</h2>
+              <h2>Crea una nueva tarea</h2>
             </div>
 
             <label>
@@ -381,11 +384,12 @@
         </section>
 
         <section class="view-section hidden" id="view-agenda">
+          <button class="ghost-button back-button section-back-button" type="button" data-back>Volver</button>
           <section class="panel agenda-panel" id="agenda">
             <div class="section-heading calendar-heading">
               <div>
                 <p class="eyebrow">Plan de estudio</p>
-                <h2>Agenda completa</h2>
+                <h2>Calendario completo</h2>
               </div>
               <div class="calendar-controls">
                 <button class="icon-button" id="calendar-prev" type="button" aria-label="Mes anterior">&lsaquo;</button>
@@ -396,29 +400,48 @@
 
             <div class="calendar-grid agenda-calendar" id="agenda-calendar-grid" aria-label="Calendario completo"></div>
 
+            <div class="agenda-divider" aria-hidden="true"></div>
+
+            <div class="agenda-list-heading">
+              <h3>Listado de tareas</h3>
+            </div>
+
             <div class="filters">
-              <input id="search" type="search" placeholder="Buscar tarea, descripcion o paso" />
-              <select id="difficulty-filter" aria-label="Filtrar por dificultad">
-                <option value="Todas">Todas</option>
-                <option>Alta</option>
-                <option>Media</option>
-                <option>Baja</option>
-              </select>
-              <select id="sort-filter" aria-label="Ordenar tareas">
-                <option value="priority">Prioridad</option>
-                <option value="dueDate">Fecha limite</option>
-                <option value="difficulty">Dificultad</option>
-                <option value="progress">Progreso</option>
-              </select>
+              <div class="filter-search">
+                <input id="search" type="search" placeholder="Buscar tarea, descripcion o paso" />
+              </div>
+              <div class="filter-row">
+                <select id="status-filter" aria-label="Filtrar por estado">
+                  <option value="Todos">Todos los estados</option>
+                  <option>Pendiente</option>
+                  <option>En progreso</option>
+                  <option>Terminada</option>
+                </select>
+                <select id="difficulty-filter" aria-label="Filtrar por dificultad">
+                  <option value="Todas">Todas las dificultades</option>
+                  <option>Baja</option>
+                  <option>Media</option>
+                  <option>Alta</option>
+                </select>
+                <input id="date-filter" type="date" aria-label="Filtrar por fecha" />
+                <select id="sort-filter" aria-label="Ordenar tareas">
+                  <option value="priority">Prioridad</option>
+                  <option value="progress">Progreso (%)</option>
+                  <option value="dueDate">Fecha limite</option>
+                  <option value="difficulty">Dificultad</option>
+                </select>
+                <button class="ghost-button clear-filters" id="clear-filters" type="button">Limpiar filtros</button>
+              </div>
             </div>
 
             <div class="task-list" id="task-list" aria-live="polite"></div>
+            <div class="pagination" id="pagination" aria-label="Paginacion de tareas"></div>
           </section>
         </section>
 
         <section class="view-section hidden" id="view-detail">
+          <button class="ghost-button back-button section-back-button" type="button" data-back>Volver</button>
           <form class="panel task-page-form" id="edit-task-form">
-            <button class="ghost-button back-button" type="button" data-back>Volver</button>
             <div class="section-heading">
               <p class="eyebrow">Detalle de tarea</p>
               <h2>Ver y editar actividad</h2>
