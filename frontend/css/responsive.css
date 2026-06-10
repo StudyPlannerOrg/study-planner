@@ -1,0 +1,265 @@
+﻿@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@media (max-width: 1080px) {
+  .hero-section,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-strip,
+  .experience-grid,
+  .tech-grid,
+  .board-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .public-nav {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .public-links,
+  .public-actions,
+  .hero-actions {
+    align-items: stretch;
+  }
+
+  .public-links a,
+  .public-actions button,
+  .hero-actions button {
+    text-align: center;
+    width: 100%;
+  }
+
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    bottom: 0;
+    max-width: 320px;
+    position: fixed;
+    top: 0;
+    transform: translateX(-105%);
+    width: 86vw;
+    z-index: 30;
+  }
+
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar.collapsed {
+    align-items: stretch;
+  }
+
+  .sidebar.collapsed .brand span,
+  .sidebar.collapsed .sidebar-note {
+    display: block;
+  }
+
+  .sidebar.collapsed .sidebar-head {
+    flex-direction: row;
+  }
+
+  .sidebar.collapsed .nav-list button {
+    display: block;
+    font-size: inherit;
+    height: auto;
+    padding: 0.85rem;
+    text-align: left;
+    width: auto;
+  }
+
+  .sidebar.collapsed .nav-list button::before {
+    content: "";
+  }
+
+  .menu-button {
+    display: grid;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 10vw, 2.35rem);
+    overflow-wrap: break-word;
+  }
+
+  .public-nav {
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .public-links {
+    display: none;
+  }
+
+  .public-actions,
+  .hero-actions {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: 1fr;
+  }
+
+  .public-links a,
+  .public-actions button,
+  .hero-actions button {
+    min-width: 0;
+    padding-inline: 0.5rem;
+    white-space: normal;
+    width: auto;
+  }
+
+  .public-page,
+  .public-main,
+  .hero-section,
+  .hero-copy,
+  .interactive-preview,
+  .planner-board {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .public-main,
+  .private-main,
+  .auth-page {
+    padding: 1rem;
+  }
+
+  .hero-section {
+    display: block;
+    gap: 1.5rem;
+    min-height: auto;
+  }
+
+  .hero-copy {
+    animation-duration: 220ms;
+    min-width: 0;
+    width: calc(100vw - 2rem);
+  }
+
+  .hero-copy p:not(.eyebrow) {
+    font-size: 1rem;
+    max-width: min(100%, 34ch);
+    width: 34ch;
+  }
+
+  .interactive-preview {
+    margin-top: 1.5rem;
+    min-height: auto;
+    width: calc(100vw - 2rem);
+  }
+
+  .planner-board {
+    border-radius: 12px;
+    padding: 0.85rem;
+    width: 100%;
+  }
+
+  .board-top strong {
+    max-width: 12ch;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .orbit-card {
+    display: none;
+  }
+
+  .metrics-grid,
+  .two-columns,
+  .filters,
+  .feature-strip,
+  .experience-grid,
+  .tech-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-main,
+  .focus-item,
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chatbot {
+    bottom: 0.8rem;
+    right: 0.8rem;
+  }
+
+  .chatbot-panel {
+    bottom: 4.2rem;
+    height: min(74vh, 620px);
+    max-height: min(78vh, 520px);
+    min-height: 360px;
+    min-width: 0;
+    width: calc(100vw - 1.6rem);
+  }
+
+  .chatbot-panel.expanded {
+    height: min(82vh, 680px);
+    max-height: 82vh;
+    width: calc(100vw - 1.6rem);
+  }
+
+  .chatbot-suggestions {
+    padding-bottom: 0.15rem;
+  }
+
+  .hero-section::before {
+    display: none;
+  }
+}

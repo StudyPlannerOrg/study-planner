@@ -2,24 +2,32 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = process.cwd();
+const reportDir = path.join(root, "docs", "reports");
 const requiredFiles = [
-  "index.html",
-  "styles.css",
-  "app.js",
-  "server.js",
+  "frontend/index.html",
+  "frontend/styles.css",
+  "frontend/app.js",
+  "frontend/assets/hugo-mascot.png",
+  "backend/server.js",
+  "backend/constants/taskOptions.js",
+  "backend/services/taskService.js",
+  "backend/services/priorityService.js",
+  "backend/repositories/taskRepository.js",
   "package.json",
   "Dockerfile",
   "docker-compose.yml",
   ".dockerignore",
   "render.yaml",
-  "DEPLOY.md",
-  "CONTRIBUTING.md",
+  "docs/deploy.md",
+  "docs/colaboracion.md",
   ".env.example",
   "db/schema.sql",
   "README.md",
-  "INFORME.md",
+  "docs/informe-tecnico.md",
   ".github/workflows/ci.yml",
   ".github/workflows/agent-review.yml",
+  "n8n/workflows/local/avisos-por-vencimiento.local.json",
+  "n8n/workflows/online/avisos-por-vencimiento.online.json",
 ];
 
 const checks = [
@@ -36,29 +44,34 @@ const checks = [
   {
     name: "Informe tecnico completo",
     run: () => {
-      const report = read("INFORME.md").toLowerCase();
+      const report = read("docs/informe-tecnico.md").toLowerCase();
       return report.includes("herramientas de ia") && report.includes("lecciones aprendidas");
     },
     detail: "El informe debe cubrir herramientas, experiencia y aprendizajes.",
   },
   {
     name: "Persistencia local",
-    run: () => read("app.js").includes("localStorage"),
+    run: () => read("frontend/app.js").includes("localStorage"),
     detail: "La app debe guardar datos para que la demo sea usable.",
   },
   {
     name: "Backend Express",
-    run: () => read("server.js").includes("express") && read("server.js").includes("/api/tasks") && read("server.js").includes("jsonwebtoken"),
-    detail: "Verifica que exista API REST propia con autenticacion JWT.",
+    run: () =>
+      read("backend/server.js").includes("express") &&
+      read("backend/server.js").includes("/api/tasks") &&
+      read("backend/routes/auth.js").includes("jsonwebtoken") &&
+      read("backend/services/taskService.js").includes("normalizeTask") &&
+      read("backend/repositories/taskRepository.js").includes("select"),
+    detail: "Verifica que exista API REST propia con autenticacion JWT, servicios y repositorios.",
   },
   {
     name: "Base PostgreSQL",
-    run: () => read("server.js").includes("pg") && read("db/schema.sql").includes("create table if not exists tasks"),
+    run: () => read("backend/db.js").includes("pg") && read("db/schema.sql").includes("create table if not exists tasks"),
     detail: "Verifica que exista conexion a PostgreSQL y esquema de tareas.",
   },
   {
     name: "Despliegue Render Neon",
-    run: () => read("render.yaml").includes("startCommand: npm start") && read("DEPLOY.md").includes("Neon") && read("DEPLOY.md").includes("Render"),
+    run: () => read("render.yaml").includes("startCommand: npm start") && read("docs/deploy.md").includes("Neon") && read("docs/deploy.md").includes("Render"),
     detail: "Verifica que exista configuracion y guia para Render + Neon.",
   },
   {
@@ -68,19 +81,31 @@ const checks = [
   },
   {
     name: "Trabajo colaborativo",
-    run: () => read("CONTRIBUTING.md").includes("feature/frontend-ui") && read("CONTRIBUTING.md").includes("Pull Request"),
+    run: () => read("docs/colaboracion.md").includes("feature/frontend-ui") && read("docs/colaboracion.md").includes("Pull Request"),
     detail: "Verifica que exista una guia para ramas y aportes individuales.",
   },
   {
     name: "Asistente de priorizacion",
-    run: () => read("app.js").includes("calculatePriorityScore") && read("app.js").includes("explainPriority"),
-    detail: "La app debe tener una logica explicable de recomendacion.",
+    run: () =>
+      read("frontend/js/priority.js").includes("calculatePriorityScore") &&
+      read("frontend/js/priority.js").includes("explainPriority") &&
+      read("backend/services/priorityService.js").includes("calculatePriorityScore") &&
+      read("backend/utils/taskMapper.js").includes("priority"),
+    detail: "La app debe tener una logica explicable de recomendacion y respaldo en backend.",
+  },
+  {
+    name: "Workflows n8n",
+    run: () =>
+      read("n8n/workflows/local/avisos-por-vencimiento.local.json").includes("http://app:3000/api/tasks/due-reminders") &&
+      read("n8n/workflows/online/avisos-por-vencimiento.online.json").includes("https://") &&
+      read("n8n/workflows/online/avisos-por-vencimiento.online.json").includes("/api/tasks/due-reminders"),
+    detail: "Verifica que existan workflows separados para local y online.",
   },
   {
     name: "Interfaz academica",
     run: () => {
-      const html = read("index.html").toLowerCase();
-      return html.includes("study planner") && html.includes("nueva tarea") && html.includes("recomendaciones de estudio");
+      const html = read("frontend/index.html").toLowerCase();
+      return html.includes("study planner") && html.includes("nueva tarea") && html.includes("hugo");
     },
     detail: "Verifica que no se haya roto el enfoque del proyecto.",
   },
@@ -105,8 +130,8 @@ const report = [
   "",
 ].join("\n");
 
-fs.mkdirSync(path.join(root, "agent-output"), { recursive: true });
-fs.writeFileSync(path.join(root, "agent-output", "review.md"), report);
+fs.mkdirSync(reportDir, { recursive: true });
+fs.writeFileSync(path.join(reportDir, "agent-review.md"), report);
 console.log(report);
 
 if (failed > 0) {

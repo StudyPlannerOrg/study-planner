@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: study_planner
       POSTGRES_USER: studyplanner
       POSTGRES_PASSWORD: studyplanner
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -21,12 +19,31 @@ services:
       PORT: 3000
       DATABASE_URL: postgres://studyplanner:studyplanner@postgres:5432/study_planner
       JWT_SECRET: docker-local-secret
+      N8N_SHARED_SECRET: docker-n8n-secret
+      HUGO_N8N_WEBHOOK_URL: http://n8n:5678/webhook/hugo-study-planner
+      HUGO_N8N_SECRET: docker-n8n-secret
       NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
 
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      GENERIC_TIMEZONE: America/Argentina/Buenos_Aires
+      TZ: America/Argentina/Buenos_Aires
+      N8N_SECURE_COOKIE: "false"
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5679/
+      N8N_EDITOR_BASE_URL: http://localhost:5679/
+    ports:
+      - "5679:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+
 volumes:
   postgres-data:
+  n8n-data:

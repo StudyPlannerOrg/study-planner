@@ -4,6 +4,8 @@
 
 Study Planner es una aplicacion full stack para organizar tareas academicas. El sistema permite registrar usuarios, iniciar sesion, guardar tareas en PostgreSQL, consultar una agenda, filtrar informacion y priorizar el estudio mediante un asistente inteligente basado en reglas explicables.
 
+La identidad visual usa un buho academico como mascota. El asistente virtual de la app se llama Hugo y aparece en la interfaz como guia de recomendaciones de estudio.
+
 ## Herramientas de IA utilizadas
 
 - Codex / ChatGPT: analisis de consigna, ideacion del proyecto, definicion del alcance, generacion del prototipo, revision de documentacion y armado de checklist.
@@ -28,8 +30,8 @@ Ademas, se incorporo un agente autonomo de revision del repositorio. Este agente
 
 El sistema se divide en:
 
-- Frontend: HTML, CSS y JavaScript vanilla.
-- Backend: Node.js con Express.
+- Frontend: HTML, CSS y JavaScript vanilla, con modulos para API, storage local, checklist, notificaciones, chatbot y utilidades de tareas.
+- Backend: Node.js con Express, rutas HTTP, servicios de dominio y repositorios de acceso a datos.
 - Base de datos: PostgreSQL.
 - Autenticacion: JWT con password hasheado mediante bcryptjs.
 - Persistencia alternativa: `localStorage` si el backend no esta disponible.
@@ -76,6 +78,8 @@ La base PostgreSQL tiene dos tablas:
 - `tasks`: tareas asociadas a cada usuario.
 
 Cada consulta de tareas se filtra por el usuario autenticado, evitando que un usuario acceda a datos de otro.
+
+La logica principal de tareas no queda mezclada en las rutas: las rutas se encargan de HTTP, los servicios normalizan y coordinan reglas de negocio, los repositorios concentran SQL, y el mapper de tareas agrega la prioridad calculada por el backend. El frontend mantiene la misma regla de prioridad para el modo local sin base de datos.
 
 Para el despliegue se usa Render como Web Service Node.js. La base PostgreSQL se aloja en Neon y se conecta al backend mediante la variable de entorno `DATABASE_URL`.
 

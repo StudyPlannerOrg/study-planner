@@ -1,8 +1,10 @@
 # Study Planner
 
+![Hugo, asistente virtual de Study Planner](frontend/assets/hugo-mascot.png)
+
 Study Planner es una aplicacion full stack para organizar tareas academicas, entregas, parciales y horas de estudio. El sistema permite crear una cuenta, iniciar sesion, guardar tareas en PostgreSQL, filtrar la agenda, marcar avances y recibir recomendaciones de priorizacion con un asistente basado en reglas explicables.
 
-El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias materias, fechas limite y trabajos pendientes.
+El objetivo del proyecto es resolver un problema real de estudiantes: decidir que estudiar primero cuando hay varias fechas limite, tareas y trabajos pendientes.
 
 ## Funcionalidades
 
@@ -14,8 +16,15 @@ El objetivo del proyecto es resolver un problema real de estudiantes: decidir qu
 - Fallback local con `localStorage` si el backend no esta disponible.
 - Agenda filtrable por texto y dificultad.
 - Metricas de tareas activas, urgentes, entregas de la semana y horas pendientes.
-- Asistente de estudio que calcula un puntaje de prioridad segun vencimiento, dificultad, tipo de tarea y carga horaria.
+- Hugo, asistente virtual de la app, calcula un puntaje de prioridad segun vencimiento, dificultad, tipo de tarea y carga horaria.
+- Notificaciones internas y recordatorios por email con n8n.
 - Agente autonomo de revision del repositorio mediante GitHub Actions.
+
+## Identidad visual
+
+- Mascota/asistente virtual: Hugo, el buho de `frontend/assets/hugo-mascot.png`.
+- La interfaz usa a Hugo en la navegacion, el favicon y el asistente flotante.
+- Si se cuenta con el logo original exacto con texto, guardarlo como `frontend/assets/logo-original.png` y usarlo solo en piezas de marca/documentacion.
 
 ## Tecnologias usadas
 
@@ -40,21 +49,28 @@ El objetivo del proyecto es resolver un problema real de estudiantes: decidir qu
 npm install
 ```
 
-2. Crear un archivo `.env` usando `.env.example` como base:
+2. Crear un archivo `.env` usando `.env.example` como base. Este archivo es local y no se sube al repositorio:
 
 ```env
 PORT=3000
 DATABASE_URL=postgres://usuario:password@localhost:5432/study_planner
 JWT_SECRET=cambia-este-secreto-en-produccion
+N8N_SHARED_SECRET=
 ```
 
-3. Ejecutar la aplicacion:
+3. Verificar que las variables locales esten completas:
+
+```bash
+npm run check:env
+```
+
+4. Ejecutar la aplicacion:
 
 ```bash
 npm start
 ```
 
-4. Abrir:
+5. Abrir:
 
 ```text
 http://localhost:3000
@@ -64,19 +80,25 @@ El servidor crea las tablas necesarias usando `db/schema.sql` al iniciar.
 
 ### Opcion 2: Docker
 
-Tambien se puede levantar la app con PostgreSQL usando Docker:
+Tambien se puede levantar la app con PostgreSQL y n8n usando Docker:
 
 ```bash
 docker compose up --build
 ```
 
-Luego abrir:
+Luego abrir la app:
 
 ```text
-http://localhost:3000
+http://localhost:3001
 ```
 
-Este modo crea un contenedor para la app y otro para PostgreSQL.
+Y abrir n8n local:
+
+```text
+http://localhost:5679
+```
+
+Este modo crea contenedores para la app, PostgreSQL y n8n. Los workflows de n8n quedan guardados en el volumen `n8n-data`.
 
 ## Base de datos
 
@@ -126,13 +148,111 @@ Variables necesarias en produccion:
 DATABASE_URL
 JWT_SECRET
 PORT
+N8N_SHARED_SECRET # secreto compartido para que n8n consulte recordatorios
 ```
 
-La guia paso a paso esta en `DEPLOY.md`.
+Para usar n8n en ambos ambientes:
+
+```text
+Docker local:
+HTTP Request de n8n -> http://app:3000/api/tasks/due-reminders
+
+Render online:
+HTTP Request de n8n -> https://study-planner.onrender.com/api/tasks/due-reminders
+```
+
+La URL local `http://app:3000/...` solo funciona entre contenedores Docker. n8n publicado en Render necesita llamar a la URL publica de la app.
+
+## Automatizaciones con n8n
+
+La app expone un endpoint para que n8n consulte tareas que vencen hoy o mañana. Los mails de recordatorio no dependen de crear o editar tareas. El payload de recordatorio tiene esta forma:
+
+```json
+{
+  "event": "task.due_reminder",
+  "user": {
+    "email": "usuario@ejemplo.com"
+  },
+  "task": {
+    "title": "TP Integrador",
+    "dueDate": "2026-06-10",
+    "dueTime": "18:00",
+    "status": "Pendiente",
+    "difficulty": "Alta"
+  },
+  "reminder": {
+    "label": "Vence mañana",
+    "dueInDays": 1
+  }
+}
+```
+
+Eventos enviados:
+
+```text
+task.due_reminder
+```
+
+La app no manda mails al crear o editar tareas. Para recordatorios diarios reales, crear un workflow programado en n8n:
+
+```text
+Schedule Trigger -> HTTP Request -> If -> Gmail
+```
+
+Configuracion local del `HTTP Request`:
+
+```text
+Method: GET
+URL: http://app:3000/api/tasks/due-reminders
+Header: x-n8n-secret = docker-n8n-secret
+```
+
+Workflow para importar en n8n local:
+
+```text
+n8n/workflows/local/avisos-por-vencimiento.local.json
+```
+
+Configuracion online del `HTTP Request`:
+
+```text
+Method: GET
+URL: https://study-planner.onrender.com/api/tasks/due-reminders
+Header: x-n8n-secret = el mismo valor de N8N_SHARED_SECRET configurado en Render
+```
+
+Workflow para importar en n8n online:
+
+```text
+n8n/workflows/online/avisos-por-vencimiento.online.json
+```
+
+El workflow online usa `{{$env.N8N_SHARED_SECRET}}`; configurar esa variable tambien en el servicio n8n de Render.
+
+Luego en `If`, usar la condicion:
+
+```text
+{{ $json.reminders.length }} is greater than 0
+```
+
+Y en Gmail usar:
+
+```text
+To: {{$json.reminders[0].user.email}}
+Subject: {{$json.reminders[0].reminder.label}}: {{$json.reminders[0].task.title}}
+```
+
+Con eso n8n puede enviar un mail diario al usuario, por ejemplo: "Vence mañana: TP Integrador".
+
+Para n8n en Render, el archivo `render.yaml` incluye un segundo servicio llamado `study-planner-n8n`. Ese servicio usa la imagen Docker oficial de n8n y variables de PostgreSQL para guardar workflows y credenciales en una base externa. Ver `docs/deploy.md` para los pasos completos.
+
+Para conectar Hugo con IA mediante un webhook de n8n, ver `docs/hugo-ia-n8n.md`.
+
+La guia paso a paso esta en `docs/deploy.md`.
 
 ## Trabajo colaborativo
 
-El proyecto esta preparado para mostrar aportes individuales mediante ramas y pull requests. La guia esta en `CONTRIBUTING.md`.
+El proyecto esta preparado para mostrar aportes individuales mediante ramas y pull requests. La guia esta en `docs/colaboracion.md`.
 
 Ramas sugeridas:
 
@@ -149,23 +269,61 @@ Cada integrante debe trabajar en su rama, hacer commits propios y abrir un Pull 
 
 ```text
 .
-|-- index.html
-|-- styles.css
-|-- app.js
-|-- server.js
 |-- package.json
 |-- Dockerfile
 |-- docker-compose.yml
 |-- .dockerignore
 |-- render.yaml
-|-- DEPLOY.md
-|-- CONTRIBUTING.md
+|-- .env                  # local, ignorado por Git
 |-- .env.example
+|-- frontend/
+|   |-- index.html
+|   |-- styles.css
+|   |-- app.js
+|   |-- assets/
+|   |   `-- hugo-mascot.png
+|   |-- css/
+|   |   |-- base.css
+|   |   |-- landing.css
+|   |   |-- auth.css
+|   |   |-- app.css
+|   |   `-- responsive.css
+|   `-- js/
+|       |-- api.js
+|       |-- chatbot.js
+|       |-- checklist.js
+|       |-- config.js
+|       |-- dates.js
+|       |-- demoTasks.js
+|       |-- helpers.js
+|       |-- notifications.js
+|       |-- priority.js
+|       |-- storage.js
+|       `-- taskUtils.js
+|-- backend/
+|   |-- server.js
+|   |-- config.js
+|   |-- db.js
+|   |-- constants/
+|   |-- services/
+|   |-- repositories/
+|   |-- routes/
+|   |-- middleware/
+|   `-- utils/
+|-- n8n/
+|   `-- workflows/
+|       |-- local/
+|       `-- online/
 |-- db/
 |   `-- schema.sql
 |-- scripts/
-|   `-- repo-agent.js
-|-- INFORME.md
+|   |-- repo-agent.js
+|   `-- check-env.js
+|-- docs/
+|   |-- deploy.md
+|   |-- colaboracion.md
+|   |-- informe-tecnico.md
+|   `-- consigna-tp-integrador.pdf
 `-- .github/workflows/
     |-- ci.yml
     `-- agent-review.yml
@@ -180,10 +338,11 @@ El repositorio incluye un agente autonomo de revision en `scripts/repo-agent.js`
 - Informe tecnico con herramientas y lecciones aprendidas.
 - Persistencia local en la app.
 - Backend Express con API REST.
+- Reglas de tareas respaldadas en servicios del backend.
 - Base PostgreSQL.
 - Configuracion de despliegue en Render.
 - Configuracion Docker.
-- Existencia del asistente de priorizacion.
+- Existencia del asistente de priorizacion en frontend y respaldo de prioridad en backend.
 - Coherencia del enfoque academico de Study Planner.
 
 El resultado queda disponible como artefacto del workflow `Autonomous Agent Review`.
