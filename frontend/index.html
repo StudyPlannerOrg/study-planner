@@ -32,7 +32,12 @@
         <section class="hero-section">
           <div class="hero-copy">
             <p class="eyebrow">Planner inteligente para estudiantes</p>
-            <h1>Converti entregas, parciales y pendientes en un plan claro</h1>
+            <h1>
+              <span>Converti entregas,</span>
+              <span>parciales y</span>
+              <span>pendientes</span>
+              <span>en un plan claro</span>
+            </h1>
             <p>
               Study Planner organiza tu carga academica, detecta prioridades y te muestra el siguiente paso sin llenar tu dia de ruido.
             </p>
@@ -500,6 +505,7 @@
           <div class="chatbot-head">
             <img src="assets/hugo-mascot.png" alt="" />
             <strong>Hugo, asistente virtual</strong>
+            <button class="icon-button" id="chatbot-resize" type="button" aria-label="Ampliar chat">[]</button>
             <button class="icon-button" id="chatbot-close" type="button">x</button>
           </div>
           <div id="ai-recommendations" class="chatbot-messages"></div>
@@ -507,6 +513,7 @@
             <button type="button" data-chat-prompt="Que hago primero?">Que hago primero?</button>
             <button type="button" data-chat-prompt="Que vence esta semana?">Esta semana</button>
             <button type="button" data-chat-prompt="Como voy?">Como voy?</button>
+            <button type="button" data-chat-prompt="Predecime mi riesgo">Prediccion</button>
           </div>
           <form class="chatbot-form" id="chatbot-form">
             <input id="chatbot-input" type="text" placeholder="Escribile a Hugo..." autocomplete="off" />

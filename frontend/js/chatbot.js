@@ -9,6 +9,10 @@ export function buildHugoReply(message, tasks, helpers) {
   const urgent = active.filter((task) => calculatePriorityScore(task) >= 75);
   const week = active.filter((task) => daysUntil(task.dueDate) <= 7);
 
+  if (!isStudyPlannerQuestion(normalized, tasks)) {
+    return "Puedo ayudarte con tu agenda academica: prioridades, vencimientos, progreso, subtareas y riesgo de tus tareas.";
+  }
+
   if (!tasks.length) return "Todavia no hay tareas cargadas. Crea una actividad y te ayudo a priorizarla.";
 
   if (normalized.includes("hola") || normalized.includes("buen")) {
@@ -32,13 +36,80 @@ export function buildHugoReply(message, tasks, helpers) {
     return `Vas con ${completed.length}/${total} tareas terminadas (${percent}%). Pendientes: ${active.length}.`;
   }
 
+  if (normalized.includes("predic") || normalized.includes("riesgo") || normalized.includes("complic")) {
+    const risky = active
+      .map((task) => ({ task, score: calculateRiskScore(task, helpers) }))
+      .filter((item) => item.score >= 45)
+      .sort((a, b) => b.score - a.score);
+
+    if (!risky.length) return "No veo riesgo alto ahora. Mantene el avance de las tareas activas y revisa la agenda semanal.";
+
+    const top = risky[0].task;
+    const level = risky[0].score >= 80 ? "alto" : risky[0].score >= 60 ? "medio" : "moderado";
+    return `Prediccion: el mayor riesgo es "${top.title}" con nivel ${level}. Vence el ${formatDate(top.dueDate)}, dificultad ${top.difficulty} y progreso ${helpers.formatProgress(top)}. Recomendacion: separa una subtarea concreta para hoy y revisa si necesitas adelantarla.`;
+  }
+
   if (normalized.includes("plan") || normalized.includes("organiza") || normalized.includes("estudi")) {
     if (!active.length) return "Tu agenda activa esta libre. Podrias revisar tareas terminadas o cargar la proxima entrega.";
     return `Plan corto: 1) trabaja en "${active[0].title}", 2) revisa subtareas incompletas, 3) deja preparada la siguiente entrega: ${active[1] ? `"${active[1].title}"` : "no hay otra tarea activa"}.`;
   }
 
-  if (urgent.length) return `Detecte ${urgent.length} tarea(s) urgente(s). La primera es "${urgent[0].title}", con entrega ${formatDate(urgent[0].dueDate)}.`;
   return "Puedo responder sobre que hacer primero, que vence esta semana, como vas de progreso o ayudarte a armar un plan.";
+}
+
+function isStudyPlannerQuestion(normalized, tasks) {
+  const academicKeywords = [
+    "agenda",
+    "avance",
+    "complic",
+    "entrega",
+    "estudi",
+    "fecha",
+    "final",
+    "organizar",
+    "organizo",
+    "ordenar",
+    "materia",
+    "parcial",
+    "pendiente",
+    "plan",
+    "prioridad",
+    "progreso",
+    "riesgo",
+    "semana",
+    "subtarea",
+    "tarea",
+    "tp",
+    "trabajo",
+    "ayuda",
+    "ayudame",
+    "recomenda",
+    "recomendas",
+    "recomendacion",
+    "urgente",
+    "vence",
+    "vencimiento",
+    "voy",
+  ];
+  const greetingKeywords = ["hola", "buen", "hey", "hugo"];
+  const taskTitles = tasks.map((task) => String(task.title || "").toLowerCase()).filter(Boolean);
+
+  return (
+    academicKeywords.some((keyword) => normalized.includes(keyword)) ||
+    greetingKeywords.some((keyword) => normalized.includes(keyword)) ||
+    taskTitles.some((title) => title && normalized.includes(title))
+  );
+}
+
+function calculateRiskScore(task, helpers) {
+  const days = daysUntil(task.dueDate);
+  const progressText = helpers.formatProgress(task);
+  const progress = Number(progressText.match(/\d+/)?.[0] || 0);
+  const dueRisk = days < 0 ? 50 : days <= 1 ? 42 : days <= 3 ? 32 : days <= 7 ? 18 : 6;
+  const difficultyRisk = task.difficulty === "Alta" ? 28 : task.difficulty === "Media" ? 16 : 8;
+  const progressRisk = progress < 25 ? 24 : progress < 60 ? 14 : 4;
+  const statusRisk = task.status === "Pendiente" ? 10 : 0;
+  return dueRisk + difficultyRisk + progressRisk + statusRisk;
 }
 
 export function renderRecommendations(container, tasks, chatMessages, helpers) {
@@ -46,7 +117,7 @@ export function renderRecommendations(container, tasks, chatMessages, helpers) {
     container.innerHTML = chatMessages
       .map(
         (message) => `
-          <div class="chat-message ${message.from}">
+          <div class="chat-message ${message.from} ${message.thinking ? "thinking" : ""}">
             <span>${escapeHtml(message.text)}</span>
           </div>
         `
