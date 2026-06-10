@@ -611,13 +611,20 @@ function closeSession(message = "") {
   currentUser = null;
   tasks = [];
   chatMessages = [];
+  activeView = "dashboard";
+  selectedTaskId = null;
+  currentPage = 1;
   stopSessionTimer();
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
   clearChatHistory(chatKey);
+  notificationPanel.classList.add("hidden");
+  chatbotPanel.classList.add("hidden");
+  closeDayModal();
   if (message) authCopy.textContent = message;
   updateSessionUi();
+  render();
   showLanding();
 }
 
@@ -726,7 +733,7 @@ async function sendHugoMessage(text) {
   if (!localAction && isCloudMode()) {
     const aiReply = await askHugoAi(message, tasks, {
       token,
-      onAuthError: () => signOutButton.click(),
+      onAuthError: () => closeSession("La sesion vencio. Volve a ingresar."),
     });
     if (aiReply?.reply) {
       reply = aiReply.reply;
@@ -792,7 +799,7 @@ function requestApi(path, options = {}) {
     onError: (message) => {
       authCopy.textContent = message;
     },
-    onAuthError: () => signOutButton.click(),
+    onAuthError: () => closeSession("La sesion vencio. Volve a ingresar."),
   });
 }
 
